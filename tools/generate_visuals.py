@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 """
-generate_visuals.py - Generate UMAP visualizations for Lean Kernel → SKY
+generate_visuals.py - Generate UMAP visualizations for LoF Kernel → SKY
 
 Generates:
-1. 2D UMAP embedding (HTML + SVG preview with connection lines)
-2. 3D UMAP embedding (HTML + SVG preview)
+1. 2D UMAP embedding (HTML + SVG preview with kNN edges)
+2. 3D UMAP embedding (HTML + SVG preview with animation)
 3. Pipeline overview diagram (SVG)
-4. Phase dependency graph (SVG)
 
 Requirements:
     pip install umap-learn plotly numpy scikit-learn
@@ -19,12 +18,12 @@ Usage:
 import json
 import os
 import sys
-import random
 from pathlib import Path
 
 try:
     import numpy as np
     from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.neighbors import NearestNeighbors
     HAS_SKLEARN = True
 except ImportError:
     HAS_SKLEARN = False
@@ -45,26 +44,42 @@ except ImportError:
     print("Warning: plotly not installed. Install with: pip install plotly")
 
 
-# LeanKernel phase families for coloring
+# Full LoF → Kernel pipeline families
 MODULE_FAMILIES = {
-    "DataPlane": ["UniverseLevel", "Expression", "Lean4LeanSKY", "Lean4LeanSKYMain"],
-    "NativeKernel": ["WHNF", "DefEq", "Inductive", "Infer", "Environment"],
-    "ComputationPlane": ["WHNFSKY", "DefEqSKY", "InferSKY", "KernelSKY", "KernelSKYMain"],
-    "FullKernel": ["EnvironmentSKY", "WHNFDeltaSKY", "WHNFIotaSKY", "FullKernelSKY", "FullKernelSKYMain"],
-    "Combinators": ["SKY", "BracketAbstraction", "SKYExec", "SKYMachineBounded", "Denotational", "GraphReduction"],
+    "LoFPrimary": ["AIG", "GateSpec", "MuxNet", "Normalization", "Optimize", "Rewrite", "Syntax"],
     "Foundation": ["Blocks", "Soundness"],
+    "Lambda": ["STLC", "STLCSKY"],
+    "Eigenform": ["EigenformBridge", "Denotational"],
+    "SKYCore": ["SKY", "BracketAbstraction", "SKYExec", "SKYMachineBounded", "SKYMultiway", "GraphReduction"],
+    "Heyting": ["Nucleus", "FixedPoint", "Stability", "Trichotomy", "CombinatorMap", "NucleusRangeOps"],
+    "Rewriting": ["CriticalPairs", "LocalConfluence", "StepAt"],
+    "Category": ["MultiwayCategory", "BranchialCategory", "Groupoid", "DoubleCategory"],
+    "Topos": ["SieveFrame", "SieveNucleus", "StepsSite", "Truncation", "Localization"],
+    "DataPlane": ["UniverseLevel", "Expression", "Lean4LeanSKY"],
+    "NativeKernel": ["WHNF", "DefEq", "Inductive", "Infer", "Environment"],
+    "ComputationPlane": ["WHNFSKY", "DefEqSKY", "InferSKY", "KernelSKY"],
+    "FullKernel": ["EnvironmentSKY", "WHNFDeltaSKY", "WHNFIotaSKY", "FullKernelSKY"],
+    "CLI": ["Lean4LeanSKYMain", "KernelSKYMain", "FullKernelSKYMain"],
     "Tests": ["LeanKernelSanity"],
 }
 
-# Color scheme matching heyting-viz style (dark theme)
+# Color scheme matching heyting-viz style
 FAMILY_COLORS = {
-    "DataPlane": "#6c5ce7",      # Purple
-    "NativeKernel": "#00b894",   # Teal
-    "ComputationPlane": "#e17055", # Orange
-    "FullKernel": "#e94560",     # Red/Pink
-    "Combinators": "#0984e3",    # Blue
-    "Foundation": "#fd79a8",     # Pink
-    "Tests": "#636e72",          # Gray
+    "LoFPrimary": "#ff6b6b",     # Red - Gates/LoF
+    "Foundation": "#feca57",     # Yellow - Foundation
+    "Lambda": "#48dbfb",         # Cyan - Lambda
+    "Eigenform": "#ff9ff3",      # Pink - Eigenform
+    "SKYCore": "#0984e3",        # Blue - SKY
+    "Heyting": "#00b894",        # Teal - Heyting
+    "Rewriting": "#a29bfe",      # Light purple - Rewriting
+    "Category": "#fd79a8",       # Pink - Category
+    "Topos": "#e17055",          # Orange - Topos
+    "DataPlane": "#6c5ce7",      # Purple - Data
+    "NativeKernel": "#00cec9",   # Cyan - Native
+    "ComputationPlane": "#fdcb6e", # Gold - Computation
+    "FullKernel": "#e94560",     # Red - Full Kernel
+    "CLI": "#636e72",            # Gray - CLI
+    "Tests": "#2d3436",          # Dark gray - Tests
     "Other": "#a0a0a0",
 }
 
@@ -106,66 +121,113 @@ def extract_features(lean_files: list) -> tuple:
     return texts, names, families
 
 
+def compute_knn_edges(X, k=5):
+    """Compute k-nearest neighbor edges from feature matrix."""
+    nn = NearestNeighbors(n_neighbors=min(k+1, X.shape[0]), metric='cosine')
+    nn.fit(X)
+    distances, indices = nn.kneighbors(X)
+
+    edges = []
+    for i in range(X.shape[0]):
+        for j in range(1, min(k+1, len(indices[i]))):  # Skip self (index 0)
+            neighbor = indices[i][j]
+            if i < neighbor:  # Avoid duplicates
+                edges.append((i, neighbor))
+
+    return edges
+
+
 def generate_umap_2d(texts, names, families, output_dir: Path):
-    """Generate 2D UMAP visualization."""
+    """Generate 2D UMAP visualization with kNN edges."""
     if not (HAS_SKLEARN and HAS_UMAP and HAS_PLOTLY):
         print("Skipping 2D UMAP: missing dependencies")
-        return None
+        return None, None
 
     vectorizer = TfidfVectorizer(max_features=1000, stop_words='english')
     X = vectorizer.fit_transform(texts)
+    X_dense = X.toarray()
 
-    reducer = umap.UMAP(n_components=2, random_state=42, n_neighbors=10, min_dist=0.1)
-    embedding = reducer.fit_transform(X.toarray())
+    # Compute kNN edges
+    edges = compute_knn_edges(X_dense, k=5)
+
+    reducer = umap.UMAP(n_components=2, random_state=42, n_neighbors=15, min_dist=0.1)
+    embedding = reducer.fit_transform(X_dense)
 
     fig = go.Figure()
 
+    # Add edges first (behind points)
+    for i, j in edges:
+        fig.add_trace(go.Scatter(
+            x=[embedding[i, 0], embedding[j, 0]],
+            y=[embedding[i, 1], embedding[j, 1]],
+            mode='lines',
+            line=dict(color='rgba(59, 75, 93, 0.18)', width=1),
+            hoverinfo='skip',
+            showlegend=False,
+        ))
+
+    # Add points
     for family in set(families):
         mask = [f == family for f in families]
         fig.add_trace(go.Scatter(
             x=[embedding[i, 0] for i, m in enumerate(mask) if m],
             y=[embedding[i, 1] for i, m in enumerate(mask) if m],
             mode='markers+text',
-            marker=dict(size=12, color=FAMILY_COLORS.get(family, "#a0a0a0")),
+            marker=dict(size=10, color=FAMILY_COLORS.get(family, "#a0a0a0")),
             text=[names[i] for i, m in enumerate(mask) if m],
             textposition='top center',
-            textfont=dict(size=9, color='white'),
+            textfont=dict(size=8, color='white'),
             name=family,
             hoverinfo='text',
         ))
 
     fig.update_layout(
-        title="Lean Kernel → SKY: 2D Module Map",
+        title="LoF Kernel → SKY: 2D Module Map",
         template="plotly_dark",
         paper_bgcolor="#0b0f14",
-        plot_bgcolor="#0b0f14",
+        plot_bgcolor="#0f1721",
         showlegend=True,
-        legend=dict(
-            bgcolor="rgba(0,0,0,0.5)",
-            font=dict(color="white")
-        ),
+        legend=dict(bgcolor="rgba(0,0,0,0.5)", font=dict(color="white")),
+        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
     )
 
-    fig.write_html(str(output_dir / "kernel_2d.html"))
-    print(f"Saved: {output_dir / 'kernel_2d.html'}")
+    fig.write_html(str(output_dir / "lof_kernel_2d.html"))
+    print(f"Saved: {output_dir / 'lof_kernel_2d.html'}")
 
-    return embedding
+    return embedding, edges
 
 
 def generate_umap_3d(texts, names, families, output_dir: Path):
     """Generate 3D UMAP visualization."""
     if not (HAS_SKLEARN and HAS_UMAP and HAS_PLOTLY):
         print("Skipping 3D UMAP: missing dependencies")
-        return None
+        return None, None
 
     vectorizer = TfidfVectorizer(max_features=1000, stop_words='english')
     X = vectorizer.fit_transform(texts)
+    X_dense = X.toarray()
 
-    reducer = umap.UMAP(n_components=3, random_state=42, n_neighbors=10, min_dist=0.1)
-    embedding = reducer.fit_transform(X.toarray())
+    edges = compute_knn_edges(X_dense, k=5)
+
+    reducer = umap.UMAP(n_components=3, random_state=42, n_neighbors=15, min_dist=0.1)
+    embedding = reducer.fit_transform(X_dense)
 
     fig = go.Figure()
 
+    # Add edges
+    for i, j in edges:
+        fig.add_trace(go.Scatter3d(
+            x=[embedding[i, 0], embedding[j, 0]],
+            y=[embedding[i, 1], embedding[j, 1]],
+            z=[embedding[i, 2], embedding[j, 2]],
+            mode='lines',
+            line=dict(color='rgba(59, 75, 93, 0.18)', width=1),
+            hoverinfo='skip',
+            showlegend=False,
+        ))
+
+    # Add points
     for family in set(families):
         mask = [f == family for f in families]
         fig.add_trace(go.Scatter3d(
@@ -173,345 +235,216 @@ def generate_umap_3d(texts, names, families, output_dir: Path):
             y=[embedding[i, 1] for i, m in enumerate(mask) if m],
             z=[embedding[i, 2] for i, m in enumerate(mask) if m],
             mode='markers+text',
-            marker=dict(size=8, color=FAMILY_COLORS.get(family, "#a0a0a0")),
+            marker=dict(size=6, color=FAMILY_COLORS.get(family, "#a0a0a0")),
             text=[names[i] for i, m in enumerate(mask) if m],
             name=family,
             hoverinfo='text',
         ))
 
     fig.update_layout(
-        title="Lean Kernel → SKY: 3D Module Map",
+        title="LoF Kernel → SKY: 3D Module Map",
         template="plotly_dark",
         paper_bgcolor="#0b0f14",
-        scene=dict(bgcolor="#0b0f14"),
+        scene=dict(
+            bgcolor="#0f1721",
+            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False, showbackground=False),
+            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False, showbackground=False),
+            zaxis=dict(showgrid=False, zeroline=False, showticklabels=False, showbackground=False),
+        ),
         showlegend=True,
     )
 
-    fig.write_html(str(output_dir / "kernel_3d.html"))
-    print(f"Saved: {output_dir / 'kernel_3d.html'}")
+    fig.write_html(str(output_dir / "lof_kernel_3d.html"))
+    print(f"Saved: {output_dir / 'lof_kernel_3d.html'}")
 
-    return embedding
+    return embedding, edges
 
 
-def generate_data_driven_preview(embedding, names, families, output_dir: Path, is_3d=False):
-    """Generate data-driven SVG preview with connection lines like GenerativeStack."""
-
+def generate_svg_preview(embedding, edges, names, families, output_dir: Path, is_3d=False):
+    """Generate SVG preview with kNN edges (matching Sky_PaperPack style)."""
     if embedding is None:
         return
 
-    # Normalize coordinates to fit in viewbox
-    min_x, max_x = embedding[:, 0].min(), embedding[:, 0].max()
-    min_y, max_y = embedding[:, 1].min(), embedding[:, 1].max()
+    # Use first 2 dims for both 2D and 3D previews
+    emb_2d = embedding[:, :2]
 
-    # Scale to 800x600 with padding
-    padding = 40
-    width, height = 800, 600
+    # Normalize to 1090x800 plot area with offset
+    min_x, max_x = emb_2d[:, 0].min(), emb_2d[:, 0].max()
+    min_y, max_y = emb_2d[:, 1].min(), emb_2d[:, 1].max()
+
+    plot_x, plot_y = 50, 50
+    plot_w, plot_h = 1090, 800
 
     def scale_x(x):
-        return padding + (x - min_x) / (max_x - min_x) * (width - 2*padding)
+        return plot_x + (x - min_x) / (max_x - min_x + 1e-10) * plot_w
 
     def scale_y(y):
-        return padding + (y - min_y) / (max_y - min_y) * (height - 2*padding)
+        return plot_y + (y - min_y) / (max_y - min_y + 1e-10) * plot_h
 
-    coords = [(scale_x(embedding[i, 0]), scale_y(embedding[i, 1])) for i in range(len(names))]
+    coords = [(scale_x(emb_2d[i, 0]), scale_y(emb_2d[i, 1])) for i in range(len(names))]
 
-    # Generate connection lines (random subset of edges)
-    random.seed(42)
+    # Generate edge lines
     lines_svg = []
-    for i in range(len(names)):
-        # Connect to 2-3 nearby points
-        for j in range(i+1, min(i+4, len(names))):
-            if random.random() < 0.3:  # 30% chance of edge
-                lines_svg.append(
-                    f'    <line x1="{coords[i][0]:.1f}" y1="{coords[i][1]:.1f}" '
-                    f'x2="{coords[j][0]:.1f}" y2="{coords[j][1]:.1f}"/>'
-                )
+    for i, j in edges:
+        lines_svg.append(
+            f'<line x1="{coords[i][0]:.2f}" y1="{coords[i][1]:.2f}" '
+            f'x2="{coords[j][0]:.2f}" y2="{coords[j][1]:.2f}" '
+            f'stroke="#3b4b5d" stroke-opacity="0.18" stroke-width="1"/>'
+        )
 
     # Generate circles
     circles_svg = []
     for i, (x, y) in enumerate(coords):
         family = families[i]
         color = FAMILY_COLORS.get(family, "#a0a0a0")
-        opacity = 0.7 + random.random() * 0.3
-        radius = 8 + random.random() * 4
         circles_svg.append(
-            f'  <circle cx="{x:.1f}" cy="{y:.1f}" r="{radius:.1f}" fill="{color}" opacity="{opacity:.2f}"/>'
+            f'<circle cx="{x:.2f}" cy="{y:.2f}" r="5" fill="{color}"/>'
         )
 
     suffix = "3d" if is_3d else "2d"
-    title = "3D Module Map" if is_3d else "2D Module Map"
+    title = "UMAP 3D — LoF/Kernel proof/declaration map" if is_3d else "UMAP 2D — LoF/Kernel proof/declaration map"
+    subtitle = "Points: declarations • Colors: module family • Edges: kNN similarity links (source-text features)"
 
-    svg = f'''<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}">
-  <rect width="{width}" height="{height}" fill="#0b0f14"/>
-  <text x="{width//2}" y="25" text-anchor="middle" fill="#e94560" font-family="Arial" font-size="16" font-weight="bold">{title}</text>
-
-  <!-- Connection lines -->
-  <g stroke="rgba(207,216,220,0.25)" stroke-width="0.5">
+    svg = f'''<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="900" viewBox="0 0 1500 900" role="img" aria-label="UMAP preview">
+<rect x="0" y="0" width="1500" height="900" fill="#0b0f14"/>
+<text x="50" y="32" fill="#ffffff" font-size="20" font-family="ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial">{title}</text>
+<text x="50" y="48" fill="#b8c7d9" font-size="12" font-family="ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial">{subtitle}</text>
+<rect x="{plot_x}" y="{plot_y}" width="{plot_w}" height="{plot_h}" fill="#0f1721" stroke="#1c2a3a" stroke-width="1"/>
 {chr(10).join(lines_svg)}
-  </g>
-
-  <!-- Module points -->
 {chr(10).join(circles_svg)}
-
-  <!-- Legend -->
-  <g transform="translate(20, {height - 100})">
-    <rect x="0" y="0" width="12" height="12" fill="#6c5ce7"/><text x="18" y="10" fill="#a0a0a0" font-size="9">DataPlane</text>
-    <rect x="0" y="18" width="12" height="12" fill="#00b894"/><text x="18" y="28" fill="#a0a0a0" font-size="9">NativeKernel</text>
-    <rect x="100" y="0" width="12" height="12" fill="#e17055"/><text x="118" y="10" fill="#a0a0a0" font-size="9">ComputationPlane</text>
-    <rect x="100" y="18" width="12" height="12" fill="#e94560"/><text x="118" y="28" fill="#a0a0a0" font-size="9">FullKernel</text>
-    <rect x="230" y="0" width="12" height="12" fill="#0984e3"/><text x="248" y="10" fill="#a0a0a0" font-size="9">Combinators</text>
-    <rect x="230" y="18" width="12" height="12" fill="#fd79a8"/><text x="248" y="28" fill="#a0a0a0" font-size="9">Foundation</text>
-  </g>
-
-  <text x="{width//2}" y="{height - 15}" text-anchor="middle" fill="#60a5fa" font-family="Arial" font-size="10">Click to open interactive view</text>
 </svg>'''
 
-    filename = f"kernel_{suffix}_preview.svg"
+    filename = f"lof_kernel_{suffix}_preview.svg"
     (output_dir / filename).write_text(svg)
     print(f"Saved: {output_dir / filename}")
 
 
 def generate_pipeline_overview(output_dir: Path):
-    """Generate pipeline overview SVG."""
+    """Generate LoF → Kernel pipeline overview SVG."""
 
     svg = '''<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" width="900" height="400">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600" width="1200" height="600">
   <defs>
-    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
       <polygon points="0 0, 10 3.5, 0 7" fill="#60a5fa"/>
     </marker>
   </defs>
 
-  <rect width="900" height="400" fill="#0b0f14"/>
-  <text x="450" y="30" text-anchor="middle" fill="#e94560" font-family="Arial" font-size="18" font-weight="bold">Lean Kernel → SKY Pipeline</text>
+  <rect width="1200" height="600" fill="#0b0f14"/>
+  <text x="600" y="35" text-anchor="middle" fill="#e94560" font-family="Arial" font-size="22" font-weight="bold">Laws of Form → Lean Kernel Pipeline</text>
+  <text x="600" y="55" text-anchor="middle" fill="#a0a0a0" font-size="12">From Spencer-Brown's distinction to verified type checking on 3 instructions</text>
 
-  <!-- Phase boxes -->
-  <!-- Data Plane -->
-  <rect x="30" y="60" width="180" height="120" rx="8" fill="#16213e" stroke="#6c5ce7" stroke-width="2"/>
-  <text x="120" y="85" text-anchor="middle" fill="#6c5ce7" font-family="Arial" font-size="12" font-weight="bold">DATA PLANE</text>
-  <text x="120" y="105" text-anchor="middle" fill="#a0a0a0" font-size="10">Phases 7-15</text>
-  <text x="40" y="125" fill="#fff" font-size="9">• Expr 9-ary Scott</text>
-  <text x="40" y="140" fill="#fff" font-size="9">• ULevel 6-ary Scott</text>
-  <text x="40" y="155" fill="#fff" font-size="9">• Bracket abstraction</text>
-  <text x="40" y="170" fill="#fff" font-size="9">• Data → Comb</text>
+  <!-- Row 1: LoF → Gates → Lambda → SKY -->
+  <rect x="30" y="80" width="150" height="100" rx="8" fill="#16213e" stroke="#ff6b6b" stroke-width="2"/>
+  <text x="105" y="105" text-anchor="middle" fill="#ff6b6b" font-size="12" font-weight="bold">LAWS OF FORM</text>
+  <text x="105" y="125" text-anchor="middle" fill="#a0a0a0" font-size="9">LoFPrimary</text>
+  <text x="40" y="145" fill="#fff" font-size="8">• Distinction (mark/void)</text>
+  <text x="40" y="158" fill="#fff" font-size="8">• AIG / Gate specs</text>
+  <text x="40" y="171" fill="#fff" font-size="8">• MuxNet circuits</text>
 
-  <!-- Arrow -->
-  <line x1="215" y1="120" x2="255" y2="120" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="185" y1="130" x2="225" y2="130" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrow)"/>
 
-  <!-- Computation Plane -->
-  <rect x="260" y="60" width="180" height="120" rx="8" fill="#16213e" stroke="#e17055" stroke-width="2"/>
-  <text x="350" y="85" text-anchor="middle" fill="#e17055" font-family="Arial" font-size="12" font-weight="bold">COMPUTATION PLANE</text>
-  <text x="350" y="105" text-anchor="middle" fill="#a0a0a0" font-size="10">Phases 16-20</text>
-  <text x="270" y="125" fill="#fff" font-size="9">• WHNF as λ-term</text>
-  <text x="270" y="140" fill="#fff" font-size="9">• DefEq as λ-term</text>
-  <text x="270" y="155" fill="#fff" font-size="9">• Infer as λ-term</text>
-  <text x="270" y="170" fill="#fff" font-size="9">• Y combinator recursion</text>
+  <rect x="230" y="80" width="150" height="100" rx="8" fill="#16213e" stroke="#48dbfb" stroke-width="2"/>
+  <text x="305" y="105" text-anchor="middle" fill="#48dbfb" font-size="12" font-weight="bold">LAMBDA</text>
+  <text x="305" y="125" text-anchor="middle" fill="#a0a0a0" font-size="9">STLC / STLCSKY</text>
+  <text x="240" y="145" fill="#fff" font-size="8">• Simply typed λ</text>
+  <text x="240" y="158" fill="#fff" font-size="8">• Type checking</text>
+  <text x="240" y="171" fill="#fff" font-size="8">• λ → SKY compile</text>
 
-  <!-- Arrow -->
-  <line x1="445" y1="120" x2="485" y2="120" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="385" y1="130" x2="425" y2="130" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrow)"/>
 
-  <!-- Full Kernel -->
-  <rect x="490" y="60" width="180" height="120" rx="8" fill="#16213e" stroke="#e94560" stroke-width="2"/>
-  <text x="580" y="85" text-anchor="middle" fill="#e94560" font-family="Arial" font-size="12" font-weight="bold">FULL KERNEL</text>
-  <text x="580" y="105" text-anchor="middle" fill="#a0a0a0" font-size="10">Phases 21-25</text>
-  <text x="500" y="125" fill="#fff" font-size="9">• Environment encoding</text>
-  <text x="500" y="140" fill="#fff" font-size="9">• δ-reduction</text>
-  <text x="500" y="155" fill="#fff" font-size="9">• ι-reduction</text>
-  <text x="500" y="170" fill="#fff" font-size="9">• β/ζ/δ/ι combined</text>
+  <rect x="430" y="80" width="150" height="100" rx="8" fill="#16213e" stroke="#0984e3" stroke-width="2"/>
+  <text x="505" y="105" text-anchor="middle" fill="#0984e3" font-size="12" font-weight="bold">SKY COMBINATORS</text>
+  <text x="505" y="125" text-anchor="middle" fill="#a0a0a0" font-size="9">Core basis</text>
+  <text x="440" y="145" fill="#fff" font-size="8">• S K Y primitives</text>
+  <text x="440" y="158" fill="#fff" font-size="8">• Bracket abstraction</text>
+  <text x="440" y="171" fill="#fff" font-size="8">• Execution engine</text>
 
-  <!-- Arrow -->
-  <line x1="675" y1="120" x2="715" y2="120" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="585" y1="130" x2="625" y2="130" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrow)"/>
 
-  <!-- SKY Execution -->
-  <rect x="720" y="60" width="150" height="120" rx="8" fill="#16213e" stroke="#0984e3" stroke-width="2"/>
-  <text x="795" y="85" text-anchor="middle" fill="#0984e3" font-family="Arial" font-size="12" font-weight="bold">SKY EXECUTION</text>
-  <text x="795" y="105" text-anchor="middle" fill="#a0a0a0" font-size="10">Runtime</text>
-  <text x="730" y="125" fill="#fff" font-size="9">• S K Y only</text>
-  <text x="730" y="140" fill="#fff" font-size="9">• Fuel-bounded</text>
-  <text x="730" y="155" fill="#fff" font-size="9">• Cross-validated</text>
-  <text x="730" y="170" fill="#fff" font-size="9">• FPGA-ready</text>
+  <rect x="630" y="80" width="150" height="100" rx="8" fill="#16213e" stroke="#ff9ff3" stroke-width="2"/>
+  <text x="705" y="105" text-anchor="middle" fill="#ff9ff3" font-size="12" font-weight="bold">EIGENFORM</text>
+  <text x="705" y="125" text-anchor="middle" fill="#a0a0a0" font-size="9">Fixed points</text>
+  <text x="640" y="145" fill="#fff" font-size="8">• Y combinator</text>
+  <text x="640" y="158" fill="#fff" font-size="8">• Self-reference</text>
+  <text x="640" y="171" fill="#fff" font-size="8">• Denotational sem.</text>
 
-  <!-- Bottom: reduction forms -->
-  <rect x="30" y="220" width="840" height="80" rx="8" fill="#16213e" stroke="#00b894" stroke-width="2"/>
-  <text x="450" y="245" text-anchor="middle" fill="#00b894" font-family="Arial" font-size="14" font-weight="bold">REDUCTION FORMS</text>
+  <line x1="785" y1="130" x2="825" y2="130" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrow)"/>
 
-  <text x="120" y="275" text-anchor="middle" fill="#6c5ce7" font-size="11" font-weight="bold">β</text>
-  <text x="120" y="290" text-anchor="middle" fill="#a0a0a0" font-size="9">(λx.M) N → M[N/x]</text>
+  <rect x="830" y="80" width="150" height="100" rx="8" fill="#16213e" stroke="#00b894" stroke-width="2"/>
+  <text x="905" y="105" text-anchor="middle" fill="#00b894" font-size="12" font-weight="bold">HEYTING</text>
+  <text x="905" y="125" text-anchor="middle" fill="#a0a0a0" font-size="9">Nucleus / Frame</text>
+  <text x="840" y="145" fill="#fff" font-size="8">• Closure operators</text>
+  <text x="840" y="158" fill="#fff" font-size="8">• Fixed points Ω</text>
+  <text x="840" y="171" fill="#fff" font-size="8">• Trichotomy</text>
 
-  <text x="300" y="275" text-anchor="middle" fill="#e17055" font-size="11" font-weight="bold">ζ</text>
-  <text x="300" y="290" text-anchor="middle" fill="#a0a0a0" font-size="9">let x := N in M → M[N/x]</text>
+  <line x1="985" y1="130" x2="1025" y2="130" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrow)"/>
 
-  <text x="500" y="275" text-anchor="middle" fill="#e94560" font-size="11" font-weight="bold">δ</text>
-  <text x="500" y="290" text-anchor="middle" fill="#a0a0a0" font-size="9">const c → body</text>
+  <rect x="1030" y="80" width="140" height="100" rx="8" fill="#16213e" stroke="#e17055" stroke-width="2"/>
+  <text x="1100" y="105" text-anchor="middle" fill="#e17055" font-size="12" font-weight="bold">TOPOS</text>
+  <text x="1100" y="125" text-anchor="middle" fill="#a0a0a0" font-size="9">Sieves / Sheaves</text>
+  <text x="1040" y="145" fill="#fff" font-size="8">• Grothendieck top.</text>
+  <text x="1040" y="158" fill="#fff" font-size="8">• Sieve nucleus</text>
+  <text x="1040" y="171" fill="#fff" font-size="8">• Gluing as closure</text>
 
-  <text x="700" y="275" text-anchor="middle" fill="#0984e3" font-size="11" font-weight="bold">ι</text>
-  <text x="700" y="290" text-anchor="middle" fill="#a0a0a0" font-size="9">casesOn (Cᵢ args) → branchᵢ</text>
+  <!-- Arrow down to Lean Kernel row -->
+  <line x1="600" y1="185" x2="600" y2="220" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrow)"/>
 
-  <!-- Bottom stats -->
-  <text x="120" y="360" text-anchor="middle" fill="#636e72" font-size="10">25 Phases</text>
-  <text x="300" y="360" text-anchor="middle" fill="#636e72" font-size="10">~2,200 Lines</text>
-  <text x="500" y="360" text-anchor="middle" fill="#636e72" font-size="10">0 Sorry</text>
-  <text x="700" y="360" text-anchor="middle" fill="#636e72" font-size="10">Cross-Validated ✓</text>
+  <!-- Row 2: Lean Kernel compilation -->
+  <rect x="100" y="230" width="200" height="110" rx="8" fill="#16213e" stroke="#6c5ce7" stroke-width="2"/>
+  <text x="200" y="255" text-anchor="middle" fill="#6c5ce7" font-size="12" font-weight="bold">DATA PLANE</text>
+  <text x="200" y="275" text-anchor="middle" fill="#a0a0a0" font-size="9">Phases 7-15</text>
+  <text x="110" y="295" fill="#fff" font-size="8">• Expr 9-ary Scott encoding</text>
+  <text x="110" y="308" fill="#fff" font-size="8">• ULevel 6-ary Scott encoding</text>
+  <text x="110" y="321" fill="#fff" font-size="8">• Data → Comb compilation</text>
+
+  <line x1="305" y1="285" x2="345" y2="285" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="350" y="230" width="200" height="110" rx="8" fill="#16213e" stroke="#fdcb6e" stroke-width="2"/>
+  <text x="450" y="255" text-anchor="middle" fill="#fdcb6e" font-size="12" font-weight="bold">COMPUTATION PLANE</text>
+  <text x="450" y="275" text-anchor="middle" fill="#a0a0a0" font-size="9">Phases 16-20</text>
+  <text x="360" y="295" fill="#fff" font-size="8">• WHNF as λ-term</text>
+  <text x="360" y="308" fill="#fff" font-size="8">• DefEq as λ-term</text>
+  <text x="360" y="321" fill="#fff" font-size="8">• Y combinator recursion</text>
+
+  <line x1="555" y1="285" x2="595" y2="285" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="600" y="230" width="200" height="110" rx="8" fill="#16213e" stroke="#e94560" stroke-width="2"/>
+  <text x="700" y="255" text-anchor="middle" fill="#e94560" font-size="12" font-weight="bold">FULL KERNEL</text>
+  <text x="700" y="275" text-anchor="middle" fill="#a0a0a0" font-size="9">Phases 21-25</text>
+  <text x="610" y="295" fill="#fff" font-size="8">• δ-reduction (unfold defs)</text>
+  <text x="610" y="308" fill="#fff" font-size="8">• ι-reduction (casesOn)</text>
+  <text x="610" y="321" fill="#fff" font-size="8">• β/ζ/δ/ι combined</text>
+
+  <line x1="805" y1="285" x2="845" y2="285" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="850" y="230" width="200" height="110" rx="8" fill="#16213e" stroke="#0984e3" stroke-width="2"/>
+  <text x="950" y="255" text-anchor="middle" fill="#0984e3" font-size="12" font-weight="bold">SKY EXECUTION</text>
+  <text x="950" y="275" text-anchor="middle" fill="#a0a0a0" font-size="9">Runtime</text>
+  <text x="860" y="295" fill="#fff" font-size="8">• Pure S, K, Y reduction</text>
+  <text x="860" y="308" fill="#fff" font-size="8">• Fuel-bounded machine</text>
+  <text x="860" y="321" fill="#fff" font-size="8">• Cross-validated ✓</text>
+
+  <!-- Bottom: Key insight -->
+  <rect x="100" y="380" width="1000" height="90" rx="8" fill="#16213e" stroke="#00b894" stroke-width="2"/>
+  <text x="600" y="410" text-anchor="middle" fill="#00b894" font-size="14" font-weight="bold">THE KEY INSIGHT</text>
+  <text x="600" y="435" text-anchor="middle" fill="#fff" font-size="11">Lean's dependent type checker (WHNF + DefEq + Infer) can be compiled to just 3 combinators:</text>
+  <text x="600" y="455" text-anchor="middle" fill="#60a5fa" font-size="12" font-weight="bold">S = λfgx.fx(gx)   •   K = λxy.x   •   Y = λf.(λx.f(xx))(λx.f(xx))</text>
+
+  <!-- Stats -->
+  <text x="200" y="520" text-anchor="middle" fill="#636e72" font-size="11">76 Lean files</text>
+  <text x="400" y="520" text-anchor="middle" fill="#636e72" font-size="11">25 Phases</text>
+  <text x="600" y="520" text-anchor="middle" fill="#636e72" font-size="11">~5,000 Lines</text>
+  <text x="800" y="520" text-anchor="middle" fill="#636e72" font-size="11">0 Sorry</text>
+  <text x="1000" y="520" text-anchor="middle" fill="#636e72" font-size="11">Cross-Validated</text>
+
+  <!-- Footer -->
+  <text x="600" y="570" text-anchor="middle" fill="#a0a0a0" font-size="10">Part of the HeytingLean formal verification project • apoth3osis.io</text>
 </svg>'''
 
-    (output_dir / "pipeline_overview.svg").write_text(svg)
-    print(f"Saved: {output_dir / 'pipeline_overview.svg'}")
-
-
-def generate_phase_dependencies(output_dir: Path):
-    """Generate phase dependency graph SVG."""
-
-    svg = '''<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 500" width="700" height="500">
-  <defs>
-    <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-      <polygon points="0 0, 8 3, 0 6" fill="#60a5fa"/>
-    </marker>
-  </defs>
-
-  <rect width="700" height="500" fill="#0b0f14"/>
-  <text x="350" y="25" text-anchor="middle" fill="#e94560" font-family="Arial" font-size="16" font-weight="bold">Phase Dependencies</text>
-
-  <!-- Row 1: Data Plane -->
-  <g transform="translate(50, 50)">
-    <rect width="50" height="30" rx="4" fill="#6c5ce7"/>
-    <text x="25" y="20" text-anchor="middle" fill="white" font-size="10">P7</text>
-  </g>
-  <g transform="translate(120, 50)">
-    <rect width="50" height="30" rx="4" fill="#6c5ce7"/>
-    <text x="25" y="20" text-anchor="middle" fill="white" font-size="10">P8</text>
-  </g>
-  <g transform="translate(190, 50)">
-    <rect width="50" height="30" rx="4" fill="#00b894"/>
-    <text x="25" y="20" text-anchor="middle" fill="white" font-size="10">P9</text>
-  </g>
-  <g transform="translate(260, 50)">
-    <rect width="50" height="30" rx="4" fill="#00b894"/>
-    <text x="25" y="20" text-anchor="middle" fill="white" font-size="10">P10</text>
-  </g>
-  <g transform="translate(330, 50)">
-    <rect width="50" height="30" rx="4" fill="#00b894"/>
-    <text x="25" y="20" text-anchor="middle" fill="white" font-size="10">P11</text>
-  </g>
-  <g transform="translate(400, 50)">
-    <rect width="50" height="30" rx="4" fill="#00b894"/>
-    <text x="25" y="20" text-anchor="middle" fill="white" font-size="10">P12</text>
-  </g>
-  <g transform="translate(470, 50)">
-    <rect width="50" height="30" rx="4" fill="#00b894"/>
-    <text x="25" y="20" text-anchor="middle" fill="white" font-size="10">P13</text>
-  </g>
-  <g transform="translate(540, 50)">
-    <rect width="50" height="30" rx="4" fill="#6c5ce7"/>
-    <text x="25" y="20" text-anchor="middle" fill="white" font-size="10">P14</text>
-  </g>
-  <g transform="translate(610, 50)">
-    <rect width="50" height="30" rx="4" fill="#6c5ce7"/>
-    <text x="25" y="20" text-anchor="middle" fill="white" font-size="10">P15</text>
-  </g>
-
-  <!-- Arrows Row 1 -->
-  <line x1="100" y1="65" x2="118" y2="65" stroke="#60a5fa" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <line x1="170" y1="65" x2="188" y2="65" stroke="#60a5fa" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <line x1="240" y1="65" x2="258" y2="65" stroke="#60a5fa" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <line x1="310" y1="65" x2="328" y2="65" stroke="#60a5fa" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <line x1="380" y1="65" x2="398" y2="65" stroke="#60a5fa" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <line x1="450" y1="65" x2="468" y2="65" stroke="#60a5fa" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <line x1="520" y1="65" x2="538" y2="65" stroke="#60a5fa" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <line x1="590" y1="65" x2="608" y2="65" stroke="#60a5fa" stroke-width="1.5" marker-end="url(#arrow)"/>
-
-  <!-- Row 2: Computation Plane -->
-  <g transform="translate(120, 150)">
-    <rect width="50" height="30" rx="4" fill="#e17055"/>
-    <text x="25" y="20" text-anchor="middle" fill="white" font-size="10">P16</text>
-  </g>
-  <g transform="translate(220, 150)">
-    <rect width="50" height="30" rx="4" fill="#e17055"/>
-    <text x="25" y="20" text-anchor="middle" fill="white" font-size="10">P17</text>
-  </g>
-  <g transform="translate(320, 150)">
-    <rect width="50" height="30" rx="4" fill="#e17055"/>
-    <text x="25" y="20" text-anchor="middle" fill="white" font-size="10">P18</text>
-  </g>
-  <g transform="translate(420, 150)">
-    <rect width="50" height="30" rx="4" fill="#e17055"/>
-    <text x="25" y="20" text-anchor="middle" fill="white" font-size="10">P19</text>
-  </g>
-  <g transform="translate(520, 150)">
-    <rect width="50" height="30" rx="4" fill="#e17055"/>
-    <text x="25" y="20" text-anchor="middle" fill="white" font-size="10">P20</text>
-  </g>
-
-  <!-- Arrows Row 1→2 -->
-  <line x1="145" y1="80" x2="145" y2="148" stroke="#60a5fa" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <line x1="215" y1="80" x2="235" y2="148" stroke="#60a5fa" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <line x1="285" y1="80" x2="325" y2="148" stroke="#60a5fa" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <line x1="425" y1="80" x2="365" y2="148" stroke="#60a5fa" stroke-width="1.5" marker-end="url(#arrow)"/>
-
-  <!-- Arrows Row 2 horizontal -->
-  <line x1="170" y1="165" x2="218" y2="165" stroke="#60a5fa" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <line x1="270" y1="165" x2="318" y2="165" stroke="#60a5fa" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <line x1="370" y1="165" x2="418" y2="165" stroke="#60a5fa" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <line x1="470" y1="165" x2="518" y2="165" stroke="#60a5fa" stroke-width="1.5" marker-end="url(#arrow)"/>
-
-  <!-- Row 3: Full Kernel -->
-  <g transform="translate(120, 250)">
-    <rect width="50" height="30" rx="4" fill="#e94560"/>
-    <text x="25" y="20" text-anchor="middle" fill="white" font-size="10">P21</text>
-  </g>
-  <g transform="translate(220, 250)">
-    <rect width="50" height="30" rx="4" fill="#e94560"/>
-    <text x="25" y="20" text-anchor="middle" fill="white" font-size="10">P22</text>
-  </g>
-  <g transform="translate(320, 250)">
-    <rect width="50" height="30" rx="4" fill="#e94560"/>
-    <text x="25" y="20" text-anchor="middle" fill="white" font-size="10">P23</text>
-  </g>
-  <g transform="translate(420, 250)">
-    <rect width="50" height="30" rx="4" fill="#e94560"/>
-    <text x="25" y="20" text-anchor="middle" fill="white" font-size="10">P24</text>
-  </g>
-  <g transform="translate(520, 250)">
-    <rect width="50" height="30" rx="4" fill="#e94560"/>
-    <text x="25" y="20" text-anchor="middle" fill="white" font-size="10">P25</text>
-  </g>
-
-  <!-- Arrows Row 2→3 -->
-  <line x1="445" y1="180" x2="145" y2="248" stroke="#60a5fa" stroke-width="1.5" marker-end="url(#arrow)"/>
-
-  <!-- Arrows Row 3 horizontal -->
-  <line x1="170" y1="265" x2="218" y2="265" stroke="#60a5fa" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <line x1="270" y1="265" x2="318" y2="265" stroke="#60a5fa" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <line x1="370" y1="265" x2="418" y2="265" stroke="#60a5fa" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <line x1="470" y1="265" x2="518" y2="265" stroke="#60a5fa" stroke-width="1.5" marker-end="url(#arrow)"/>
-
-  <!-- Legend -->
-  <g transform="translate(50, 350)">
-    <rect width="15" height="15" fill="#6c5ce7"/>
-    <text x="25" y="12" fill="white" font-size="10">Data Plane (7-8, 14-15)</text>
-  </g>
-  <g transform="translate(200, 350)">
-    <rect width="15" height="15" fill="#00b894"/>
-    <text x="25" y="12" fill="white" font-size="10">Native Kernel (9-13)</text>
-  </g>
-  <g transform="translate(370, 350)">
-    <rect width="15" height="15" fill="#e17055"/>
-    <text x="25" y="12" fill="white" font-size="10">Computation Plane (16-20)</text>
-  </g>
-  <g transform="translate(550, 350)">
-    <rect width="15" height="15" fill="#e94560"/>
-    <text x="25" y="12" fill="white" font-size="10">Full Kernel (21-25)</text>
-  </g>
-
-  <!-- Phase descriptions -->
-  <text x="50" y="420" fill="#636e72" font-size="9">P7: ULevel  P8: Expr  P9: WHNF  P10: DefEq  P11: Inductive  P12: Infer  P13: Environment  P14: Lean4LeanSKY  P15: Demo</text>
-  <text x="50" y="440" fill="#636e72" font-size="9">P16: WHNFSKY  P17: DefEqSKY  P18: InferSKY  P19: KernelSKY  P20: Demo</text>
-  <text x="50" y="460" fill="#636e72" font-size="9">P21: EnvironmentSKY  P22: WHNFDeltaSKY  P23: WHNFIotaSKY  P24: FullKernelSKY  P25: Demo</text>
-</svg>'''
-
-    (output_dir / "phase_dependencies.svg").write_text(svg)
-    print(f"Saved: {output_dir / 'phase_dependencies.svg'}")
+    (output_dir / "lof_kernel_pipeline.svg").write_text(svg)
+    print(f"Saved: {output_dir / 'lof_kernel_pipeline.svg'}")
 
 
 def main():
@@ -521,35 +454,31 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
 
     print("=" * 60)
-    print("Lean Kernel → SKY Visualization Generator")
+    print("LoF Kernel → SKY Visualization Generator")
     print("=" * 60)
     print()
 
     # Collect Lean files
     lean_files = collect_lean_files(bundle_dir / "HeytingLean")
 
-    embedding_2d = None
-    embedding_3d = None
-
     if lean_files:
         print(f"Found {len(lean_files)} Lean files")
         texts, names, families = extract_features(lean_files)
 
         if texts:
-            embedding_2d = generate_umap_2d(texts, names, families, output_dir)
-            embedding_3d = generate_umap_3d(texts, names, families, output_dir)
+            embedding_2d, edges_2d = generate_umap_2d(texts, names, families, output_dir)
+            embedding_3d, edges_3d = generate_umap_3d(texts, names, families, output_dir)
 
-            # Generate data-driven previews
-            if embedding_2d is not None:
-                generate_data_driven_preview(embedding_2d, names, families, output_dir, is_3d=False)
-            if embedding_3d is not None:
-                generate_data_driven_preview(embedding_3d[:, :2], names, families, output_dir, is_3d=True)
+            # Generate SVG previews with kNN edges
+            if embedding_2d is not None and edges_2d is not None:
+                generate_svg_preview(embedding_2d, edges_2d, names, families, output_dir, is_3d=False)
+            if embedding_3d is not None and edges_3d is not None:
+                generate_svg_preview(embedding_3d, edges_3d, names, families, output_dir, is_3d=True)
     else:
         print("No Lean files found - generating static visuals only")
 
-    # Always generate static SVGs
+    # Always generate pipeline overview
     generate_pipeline_overview(output_dir)
-    generate_phase_dependencies(output_dir)
 
     print()
     print("Done!")

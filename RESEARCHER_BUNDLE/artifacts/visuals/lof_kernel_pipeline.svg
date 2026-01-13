@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600" width="1200" height="600">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#60a5fa"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="600" fill="#0b0f14"/>
+  <text x="600" y="35" text-anchor="middle" fill="#e94560" font-family="Arial" font-size="22" font-weight="bold">Laws of Form → Lean Kernel Pipeline</text>
+  <text x="600" y="55" text-anchor="middle" fill="#a0a0a0" font-size="12">From Spencer-Brown's distinction to verified type checking on 3 instructions</text>
+
+  <!-- Row 1: LoF → Gates → Lambda → SKY -->
+  <rect x="30" y="80" width="150" height="100" rx="8" fill="#16213e" stroke="#ff6b6b" stroke-width="2"/>
+  <text x="105" y="105" text-anchor="middle" fill="#ff6b6b" font-size="12" font-weight="bold">LAWS OF FORM</text>
+  <text x="105" y="125" text-anchor="middle" fill="#a0a0a0" font-size="9">LoFPrimary</text>
+  <text x="40" y="145" fill="#fff" font-size="8">• Distinction (mark/void)</text>
+  <text x="40" y="158" fill="#fff" font-size="8">• AIG / Gate specs</text>
+  <text x="40" y="171" fill="#fff" font-size="8">• MuxNet circuits</text>
+
+  <line x1="185" y1="130" x2="225" y2="130" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="230" y="80" width="150" height="100" rx="8" fill="#16213e" stroke="#48dbfb" stroke-width="2"/>
+  <text x="305" y="105" text-anchor="middle" fill="#48dbfb" font-size="12" font-weight="bold">LAMBDA</text>
+  <text x="305" y="125" text-anchor="middle" fill="#a0a0a0" font-size="9">STLC / STLCSKY</text>
+  <text x="240" y="145" fill="#fff" font-size="8">• Simply typed λ</text>
+  <text x="240" y="158" fill="#fff" font-size="8">• Type checking</text>
+  <text x="240" y="171" fill="#fff" font-size="8">• λ → SKY compile</text>
+
+  <line x1="385" y1="130" x2="425" y2="130" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="430" y="80" width="150" height="100" rx="8" fill="#16213e" stroke="#0984e3" stroke-width="2"/>
+  <text x="505" y="105" text-anchor="middle" fill="#0984e3" font-size="12" font-weight="bold">SKY COMBINATORS</text>
+  <text x="505" y="125" text-anchor="middle" fill="#a0a0a0" font-size="9">Core basis</text>
+  <text x="440" y="145" fill="#fff" font-size="8">• S K Y primitives</text>
+  <text x="440" y="158" fill="#fff" font-size="8">• Bracket abstraction</text>
+  <text x="440" y="171" fill="#fff" font-size="8">• Execution engine</text>
+
+  <line x1="585" y1="130" x2="625" y2="130" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="630" y="80" width="150" height="100" rx="8" fill="#16213e" stroke="#ff9ff3" stroke-width="2"/>
+  <text x="705" y="105" text-anchor="middle" fill="#ff9ff3" font-size="12" font-weight="bold">EIGENFORM</text>
+  <text x="705" y="125" text-anchor="middle" fill="#a0a0a0" font-size="9">Fixed points</text>
+  <text x="640" y="145" fill="#fff" font-size="8">• Y combinator</text>
+  <text x="640" y="158" fill="#fff" font-size="8">• Self-reference</text>
+  <text x="640" y="171" fill="#fff" font-size="8">• Denotational sem.</text>
+
+  <line x1="785" y1="130" x2="825" y2="130" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="830" y="80" width="150" height="100" rx="8" fill="#16213e" stroke="#00b894" stroke-width="2"/>
+  <text x="905" y="105" text-anchor="middle" fill="#00b894" font-size="12" font-weight="bold">HEYTING</text>
+  <text x="905" y="125" text-anchor="middle" fill="#a0a0a0" font-size="9">Nucleus / Frame</text>
+  <text x="840" y="145" fill="#fff" font-size="8">• Closure operators</text>
+  <text x="840" y="158" fill="#fff" font-size="8">• Fixed points Ω</text>
+  <text x="840" y="171" fill="#fff" font-size="8">• Trichotomy</text>
+
+  <line x1="985" y1="130" x2="1025" y2="130" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="1030" y="80" width="140" height="100" rx="8" fill="#16213e" stroke="#e17055" stroke-width="2"/>
+  <text x="1100" y="105" text-anchor="middle" fill="#e17055" font-size="12" font-weight="bold">TOPOS</text>
+  <text x="1100" y="125" text-anchor="middle" fill="#a0a0a0" font-size="9">Sieves / Sheaves</text>
+  <text x="1040" y="145" fill="#fff" font-size="8">• Grothendieck top.</text>
+  <text x="1040" y="158" fill="#fff" font-size="8">• Sieve nucleus</text>
+  <text x="1040" y="171" fill="#fff" font-size="8">• Gluing as closure</text>
+
+  <!-- Arrow down to Lean Kernel row -->
+  <line x1="600" y1="185" x2="600" y2="220" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Row 2: Lean Kernel compilation -->
+  <rect x="100" y="230" width="200" height="110" rx="8" fill="#16213e" stroke="#6c5ce7" stroke-width="2"/>
+  <text x="200" y="255" text-anchor="middle" fill="#6c5ce7" font-size="12" font-weight="bold">DATA PLANE</text>
+  <text x="200" y="275" text-anchor="middle" fill="#a0a0a0" font-size="9">Phases 7-15</text>
+  <text x="110" y="295" fill="#fff" font-size="8">• Expr 9-ary Scott encoding</text>
+  <text x="110" y="308" fill="#fff" font-size="8">• ULevel 6-ary Scott encoding</text>
+  <text x="110" y="321" fill="#fff" font-size="8">• Data → Comb compilation</text>
+
+  <line x1="305" y1="285" x2="345" y2="285" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="350" y="230" width="200" height="110" rx="8" fill="#16213e" stroke="#fdcb6e" stroke-width="2"/>
+  <text x="450" y="255" text-anchor="middle" fill="#fdcb6e" font-size="12" font-weight="bold">COMPUTATION PLANE</text>
+  <text x="450" y="275" text-anchor="middle" fill="#a0a0a0" font-size="9">Phases 16-20</text>
+  <text x="360" y="295" fill="#fff" font-size="8">• WHNF as λ-term</text>
+  <text x="360" y="308" fill="#fff" font-size="8">• DefEq as λ-term</text>
+  <text x="360" y="321" fill="#fff" font-size="8">• Y combinator recursion</text>
+
+  <line x1="555" y1="285" x2="595" y2="285" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="600" y="230" width="200" height="110" rx="8" fill="#16213e" stroke="#e94560" stroke-width="2"/>
+  <text x="700" y="255" text-anchor="middle" fill="#e94560" font-size="12" font-weight="bold">FULL KERNEL</text>
+  <text x="700" y="275" text-anchor="middle" fill="#a0a0a0" font-size="9">Phases 21-25</text>
+  <text x="610" y="295" fill="#fff" font-size="8">• δ-reduction (unfold defs)</text>
+  <text x="610" y="308" fill="#fff" font-size="8">• ι-reduction (casesOn)</text>
+  <text x="610" y="321" fill="#fff" font-size="8">• β/ζ/δ/ι combined</text>
+
+  <line x1="805" y1="285" x2="845" y2="285" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <rect x="850" y="230" width="200" height="110" rx="8" fill="#16213e" stroke="#0984e3" stroke-width="2"/>
+  <text x="950" y="255" text-anchor="middle" fill="#0984e3" font-size="12" font-weight="bold">SKY EXECUTION</text>
+  <text x="950" y="275" text-anchor="middle" fill="#a0a0a0" font-size="9">Runtime</text>
+  <text x="860" y="295" fill="#fff" font-size="8">• Pure S, K, Y reduction</text>
+  <text x="860" y="308" fill="#fff" font-size="8">• Fuel-bounded machine</text>
+  <text x="860" y="321" fill="#fff" font-size="8">• Cross-validated ✓</text>
+
+  <!-- Bottom: Key insight -->
+  <rect x="100" y="380" width="1000" height="90" rx="8" fill="#16213e" stroke="#00b894" stroke-width="2"/>
+  <text x="600" y="410" text-anchor="middle" fill="#00b894" font-size="14" font-weight="bold">THE KEY INSIGHT</text>
+  <text x="600" y="435" text-anchor="middle" fill="#fff" font-size="11">Lean's dependent type checker (WHNF + DefEq + Infer) can be compiled to just 3 combinators:</text>
+  <text x="600" y="455" text-anchor="middle" fill="#60a5fa" font-size="12" font-weight="bold">S = λfgx.fx(gx)   •   K = λxy.x   •   Y = λf.(λx.f(xx))(λx.f(xx))</text>
+
+  <!-- Stats -->
+  <text x="200" y="520" text-anchor="middle" fill="#636e72" font-size="11">76 Lean files</text>
+  <text x="400" y="520" text-anchor="middle" fill="#636e72" font-size="11">25 Phases</text>
+  <text x="600" y="520" text-anchor="middle" fill="#636e72" font-size="11">~5,000 Lines</text>
+  <text x="800" y="520" text-anchor="middle" fill="#636e72" font-size="11">0 Sorry</text>
+  <text x="1000" y="520" text-anchor="middle" fill="#636e72" font-size="11">Cross-Validated</text>
+
+  <!-- Footer -->
+  <text x="600" y="570" text-anchor="middle" fill="#a0a0a0" font-size="10">Part of the HeytingLean formal verification project • apoth3osis.io</text>
+</svg>
