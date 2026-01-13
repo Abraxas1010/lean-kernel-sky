@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lean Kernel → SKY Combinators</title>
+    <style>
+        :root {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: #16213e;
+            --text-primary: #eee;
+            --text-secondary: #a0a0a0;
+            --accent-red: #e94560;
+            --accent-blue: #0984e3;
+            --accent-purple: #6c5ce7;
+            --accent-orange: #e17055;
+            --accent-teal: #00b894;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            padding: 4rem 0;
+            border-bottom: 1px solid var(--bg-secondary);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, var(--accent-red), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto 2rem;
+        }
+
+        .badges {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .badge-lean { background: var(--accent-blue); }
+        .badge-sorry { background: #2ecc71; }
+        .badge-phases { background: var(--accent-purple); }
+        .badge-verified { background: var(--accent-teal); }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin: 3rem 0;
+        }
+
+        .card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: transform 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+        }
+
+        .card h3 {
+            color: var(--accent-red);
+            margin-bottom: 1rem;
+        }
+
+        .card p {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .card a {
+            color: var(--accent-blue);
+            text-decoration: none;
+        }
+
+        .card a:hover {
+            text-decoration: underline;
+        }
+
+        .visual-preview {
+            text-align: center;
+            margin: 3rem 0;
+        }
+
+        .visual-preview img {
+            max-width: 100%;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+
+        .combinator-box {
+            background: var(--bg-secondary);
+            border-left: 4px solid var(--accent-purple);
+            padding: 1.5rem;
+            margin: 2rem 0;
+            font-family: 'Fira Code', monospace;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .combinator-box code {
+            display: block;
+            margin: 0.5rem 0;
+            color: var(--accent-orange);
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+            border-top: 1px solid var(--bg-secondary);
+            margin-top: 3rem;
+        }
+
+        footer a {
+            color: var(--accent-blue);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Lean Kernel → SKY Combinators</h1>
+            <p class="subtitle">
+                A verified pipeline that compiles Lean 4's type-checking algorithms
+                to pure SKY combinator terms, enabling dependent type theory to run
+                on a Turing-complete three-instruction machine.
+            </p>
+            <div class="badges">
+                <span class="badge badge-lean">Lean 4</span>
+                <span class="badge badge-sorry">0 sorry</span>
+                <span class="badge badge-phases">25 Phases</span>
+                <span class="badge badge-verified">Cross-validated</span>
+            </div>
+        </header>
+
+        <div class="combinator-box">
+            <strong>The Three Combinators:</strong>
+            <code>S = λf g x. f x (g x)   -- Substitution</code>
+            <code>K = λx y. x             -- Constant</code>
+            <code>Y = λf. (λx. f(x x))(λx. f(x x))  -- Fixed-point</code>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <h3>Documentation</h3>
+                <p>Comprehensive guides to the 25-phase compilation pipeline.</p>
+                <a href="01_Pipeline_Architecture.md">Pipeline Architecture</a><br>
+                <a href="02_Algorithm_Index.md">Algorithm Index</a><br>
+                <a href="03_Reproducibility.md">Reproducibility Guide</a><br>
+                <a href="04_Dependencies.md">Dependencies</a>
+            </div>
+
+            <div class="card">
+                <h3>Interactive Visualizations</h3>
+                <p>Explore the proof structure in 2D and 3D.</p>
+                <a href="RESEARCHER_BUNDLE/artifacts/visuals/kernel_2d.html">2D Module Map</a><br>
+                <a href="RESEARCHER_BUNDLE/artifacts/visuals/kernel_3d.html">3D Module Map</a><br>
+                <a href="RESEARCHER_BUNDLE/artifacts/visuals/pipeline_overview.svg">Pipeline Overview</a><br>
+                <a href="RESEARCHER_BUNDLE/artifacts/visuals/phase_dependencies.svg">Phase Dependencies</a>
+            </div>
+
+            <div class="card">
+                <h3>Source Code</h3>
+                <p>Self-contained Lean 4 implementation with cross-validation demos.</p>
+                <a href="RESEARCHER_BUNDLE/HeytingLean.lean">Root Import</a><br>
+                <a href="RESEARCHER_BUNDLE/HeytingLean/LoF/LeanKernel/">LeanKernel Modules</a><br>
+                <a href="RESEARCHER_BUNDLE/HeytingLean/LoF/Combinators/">SKY Infrastructure</a><br>
+                <a href="RESEARCHER_BUNDLE/scripts/verify_lean_kernel.sh">Verification Script</a>
+            </div>
+
+            <div class="card">
+                <h3>Quick Start</h3>
+                <p>Verify everything with one command:</p>
+                <pre style="background: #1a1a2e; padding: 1rem; border-radius: 4px; overflow-x: auto;">
+cd RESEARCHER_BUNDLE
+./scripts/verify_lean_kernel.sh</pre>
+            </div>
+        </div>
+
+        <div class="visual-preview">
+            <h2 style="color: var(--accent-red); margin-bottom: 1rem;">Pipeline Overview</h2>
+            <img src="RESEARCHER_BUNDLE/artifacts/visuals/pipeline_overview.svg" alt="Pipeline Overview">
+        </div>
+
+        <footer>
+            <p>Part of the <a href="https://apoth3osis.io">HeytingLean</a> formal verification project</p>
+            <p style="margin-top: 0.5rem;">
+                <a href="https://github.com/Abraxas1010/lean-kernel-sky">GitHub</a>
+            </p>
+        </footer>
+    </div>
+</body>
+</html>

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  <rect width="400" height="300" fill="#1a1a2e"/>
+  <text x="200" y="25" text-anchor="middle" fill="#e94560" font-family="Arial" font-size="14" font-weight="bold">2D Module Map</text>
+
+  <!-- Data Plane cluster -->
+  <circle cx="80" cy="100" r="8" fill="#6c5ce7"/>
+  <circle cx="95" cy="115" r="6" fill="#6c5ce7"/>
+  <circle cx="110" cy="95" r="7" fill="#6c5ce7"/>
+  <text x="95" y="140" text-anchor="middle" fill="#6c5ce7" font-size="8">Data Plane</text>
+
+  <!-- Native Kernel cluster -->
+  <circle cx="180" cy="80" r="7" fill="#00b894"/>
+  <circle cx="200" cy="95" r="8" fill="#00b894"/>
+  <circle cx="165" cy="100" r="6" fill="#00b894"/>
+  <text x="180" y="125" text-anchor="middle" fill="#00b894" font-size="8">Native</text>
+
+  <!-- Computation Plane cluster -->
+  <circle cx="280" cy="110" r="9" fill="#e17055"/>
+  <circle cx="300" cy="95" r="7" fill="#e17055"/>
+  <circle cx="265" cy="125" r="6" fill="#e17055"/>
+  <text x="280" y="150" text-anchor="middle" fill="#e17055" font-size="8">Computation</text>
+
+  <!-- Full Kernel cluster -->
+  <circle cx="200" cy="200" r="10" fill="#e94560"/>
+  <circle cx="220" cy="185" r="8" fill="#e94560"/>
+  <circle cx="180" cy="215" r="7" fill="#e94560"/>
+  <text x="200" y="245" text-anchor="middle" fill="#e94560" font-size="8">Full Kernel</text>
+
+  <!-- Combinators cluster -->
+  <circle cx="320" cy="200" r="8" fill="#0984e3"/>
+  <circle cx="335" cy="215" r="6" fill="#0984e3"/>
+  <text x="325" y="240" text-anchor="middle" fill="#0984e3" font-size="8">Combinators</text>
+
+  <text x="200" y="280" text-anchor="middle" fill="#60a5fa" font-family="Arial" font-size="10">Click to open interactive view</text>
+</svg>

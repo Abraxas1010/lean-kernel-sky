@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" width="900" height="400">
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#60a5fa"/>
+    </marker>
+  </defs>
+
+  <rect width="900" height="400" fill="#1a1a2e"/>
+  <text x="450" y="30" text-anchor="middle" fill="#e94560" font-family="Arial" font-size="18" font-weight="bold">Lean Kernel → SKY Pipeline</text>
+
+  <!-- Phase boxes -->
+  <!-- Data Plane -->
+  <rect x="30" y="60" width="180" height="120" rx="8" fill="#16213e" stroke="#6c5ce7" stroke-width="2"/>
+  <text x="120" y="85" text-anchor="middle" fill="#6c5ce7" font-family="Arial" font-size="12" font-weight="bold">DATA PLANE</text>
+  <text x="120" y="105" text-anchor="middle" fill="#a0a0a0" font-size="10">Phases 7-15</text>
+  <text x="40" y="125" fill="#fff" font-size="9">• Expr 9-ary Scott</text>
+  <text x="40" y="140" fill="#fff" font-size="9">• ULevel 6-ary Scott</text>
+  <text x="40" y="155" fill="#fff" font-size="9">• Bracket abstraction</text>
+  <text x="40" y="170" fill="#fff" font-size="9">• Data → Comb</text>
+
+  <!-- Arrow -->
+  <line x1="215" y1="120" x2="255" y2="120" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+  <!-- Computation Plane -->
+  <rect x="260" y="60" width="180" height="120" rx="8" fill="#16213e" stroke="#e17055" stroke-width="2"/>
+  <text x="350" y="85" text-anchor="middle" fill="#e17055" font-family="Arial" font-size="12" font-weight="bold">COMPUTATION PLANE</text>
+  <text x="350" y="105" text-anchor="middle" fill="#a0a0a0" font-size="10">Phases 16-20</text>
+  <text x="270" y="125" fill="#fff" font-size="9">• WHNF as λ-term</text>
+  <text x="270" y="140" fill="#fff" font-size="9">• DefEq as λ-term</text>
+  <text x="270" y="155" fill="#fff" font-size="9">• Infer as λ-term</text>
+  <text x="270" y="170" fill="#fff" font-size="9">• Y combinator recursion</text>
+
+  <!-- Arrow -->
+  <line x1="445" y1="120" x2="485" y2="120" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+  <!-- Full Kernel -->
+  <rect x="490" y="60" width="180" height="120" rx="8" fill="#16213e" stroke="#e94560" stroke-width="2"/>
+  <text x="580" y="85" text-anchor="middle" fill="#e94560" font-family="Arial" font-size="12" font-weight="bold">FULL KERNEL</text>
+  <text x="580" y="105" text-anchor="middle" fill="#a0a0a0" font-size="10">Phases 21-25</text>
+  <text x="500" y="125" fill="#fff" font-size="9">• Environment encoding</text>
+  <text x="500" y="140" fill="#fff" font-size="9">• δ-reduction</text>
+  <text x="500" y="155" fill="#fff" font-size="9">• ι-reduction</text>
+  <text x="500" y="170" fill="#fff" font-size="9">• β/ζ/δ/ι combined</text>
+
+  <!-- Arrow -->
+  <line x1="675" y1="120" x2="715" y2="120" stroke="#60a5fa" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+  <!-- SKY Execution -->
+  <rect x="720" y="60" width="150" height="120" rx="8" fill="#16213e" stroke="#0984e3" stroke-width="2"/>
+  <text x="795" y="85" text-anchor="middle" fill="#0984e3" font-family="Arial" font-size="12" font-weight="bold">SKY EXECUTION</text>
+  <text x="795" y="105" text-anchor="middle" fill="#a0a0a0" font-size="10">Runtime</text>
+  <text x="730" y="125" fill="#fff" font-size="9">• S K Y only</text>
+  <text x="730" y="140" fill="#fff" font-size="9">• Fuel-bounded</text>
+  <text x="730" y="155" fill="#fff" font-size="9">• Cross-validated</text>
+  <text x="730" y="170" fill="#fff" font-size="9">• FPGA-ready</text>
+
+  <!-- Bottom: reduction forms -->
+  <rect x="30" y="220" width="840" height="80" rx="8" fill="#16213e" stroke="#00b894" stroke-width="2"/>
+  <text x="450" y="245" text-anchor="middle" fill="#00b894" font-family="Arial" font-size="14" font-weight="bold">REDUCTION FORMS</text>
+
+  <text x="120" y="275" text-anchor="middle" fill="#6c5ce7" font-size="11" font-weight="bold">β</text>
+  <text x="120" y="290" text-anchor="middle" fill="#a0a0a0" font-size="9">(λx.M) N → M[N/x]</text>
+
+  <text x="300" y="275" text-anchor="middle" fill="#e17055" font-size="11" font-weight="bold">ζ</text>
+  <text x="300" y="290" text-anchor="middle" fill="#a0a0a0" font-size="9">let x := N in M → M[N/x]</text>
+
+  <text x="500" y="275" text-anchor="middle" fill="#e94560" font-size="11" font-weight="bold">δ</text>
+  <text x="500" y="290" text-anchor="middle" fill="#a0a0a0" font-size="9">const c → body</text>
+
+  <text x="700" y="275" text-anchor="middle" fill="#0984e3" font-size="11" font-weight="bold">ι</text>
+  <text x="700" y="290" text-anchor="middle" fill="#a0a0a0" font-size="9">casesOn (Cᵢ args) → branchᵢ</text>
+
+  <!-- Bottom stats -->
+  <text x="120" y="360" text-anchor="middle" fill="#636e72" font-size="10">25 Phases</text>
+  <text x="300" y="360" text-anchor="middle" fill="#636e72" font-size="10">~2,200 Lines</text>
+  <text x="500" y="360" text-anchor="middle" fill="#636e72" font-size="10">0 Sorry</text>
+  <text x="700" y="360" text-anchor="middle" fill="#636e72" font-size="10">Cross-Validated ✓</text>
+</svg>
