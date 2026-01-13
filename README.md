@@ -93,24 +93,24 @@ Explore the proof structure in 2D and 3D:
 <tr>
 <td align="center" width="50%">
 <strong>2D Proof Map</strong><br/>
-<em>Pan, zoom, search declarations</em><br/>
+<em>Pan, zoom, hover for names</em><br/>
 <a href="https://abraxas1010.github.io/lean-kernel-sky/RESEARCHER_BUNDLE/artifacts/visuals/lof_kernel_2d.html">
   <img src="RESEARCHER_BUNDLE/artifacts/visuals/lof_kernel_2d_preview.svg" alt="UMAP 2D preview" width="100%"/>
 </a><br/>
 <a href="https://abraxas1010.github.io/lean-kernel-sky/RESEARCHER_BUNDLE/artifacts/visuals/lof_kernel_2d.html">lof_kernel_2d.html</a>
 </td>
 <td align="center" width="50%">
-<strong>3D Proof Map</strong><br/>
-<em>Rotate, zoom, explore clusters</em><br/>
+<strong>3D Proof Map (Animated)</strong><br/>
+<em>Rotating preview - click for interactive</em><br/>
 <a href="https://abraxas1010.github.io/lean-kernel-sky/RESEARCHER_BUNDLE/artifacts/visuals/lof_kernel_3d.html">
-  <img src="RESEARCHER_BUNDLE/artifacts/visuals/lof_kernel_3d_preview.svg" alt="UMAP 3D preview" width="100%"/>
+  <img src="RESEARCHER_BUNDLE/artifacts/visuals/lof_kernel_3d_animated.svg" alt="UMAP 3D animated preview" width="100%"/>
 </a><br/>
 <a href="https://abraxas1010.github.io/lean-kernel-sky/RESEARCHER_BUNDLE/artifacts/visuals/lof_kernel_3d.html">lof_kernel_3d.html</a>
 </td>
 </tr>
 </table>
 
-**UMAP note**: Color-coded by module family (LoFPrimary, Lambda, SKY, Heyting, Topos, Kernel). Edges show kNN similarity. The formal guarantee is the Lean kernel check, not the embedding.
+**UMAP note**: Color-coded by module family (LoFPrimary, Lambda, SKY, Heyting, Topos, Kernel). Hover for names. The formal guarantee is the Lean kernel check, not the embedding.
 
 ---
 

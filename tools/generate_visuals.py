@@ -199,7 +199,7 @@ def generate_umap_2d(texts, names, families, output_dir: Path):
 
 
 def generate_umap_3d(texts, names, families, output_dir: Path):
-    """Generate 3D UMAP visualization."""
+    """Generate 3D UMAP visualization (names shown on hover only)."""
     if not (HAS_SKLEARN and HAS_UMAP and HAS_PLOTLY):
         print("Skipping 3D UMAP: missing dependencies")
         return None, None
@@ -222,23 +222,24 @@ def generate_umap_3d(texts, names, families, output_dir: Path):
             y=[embedding[i, 1], embedding[j, 1]],
             z=[embedding[i, 2], embedding[j, 2]],
             mode='lines',
-            line=dict(color='rgba(59, 75, 93, 0.18)', width=1),
+            line=dict(color='rgba(59, 75, 93, 0.35)', width=1),
             hoverinfo='skip',
             showlegend=False,
         ))
 
-    # Add points
+    # Add points (markers only - names show on hover)
     for family in set(families):
         mask = [f == family for f in families]
         fig.add_trace(go.Scatter3d(
             x=[embedding[i, 0] for i, m in enumerate(mask) if m],
             y=[embedding[i, 1] for i, m in enumerate(mask) if m],
             z=[embedding[i, 2] for i, m in enumerate(mask) if m],
-            mode='markers+text',
+            mode='markers',  # No text labels - hover only
             marker=dict(size=6, color=FAMILY_COLORS.get(family, "#a0a0a0")),
             text=[names[i] for i, m in enumerate(mask) if m],
             name=family,
             hoverinfo='text',
+            hovertemplate='%{text}<extra></extra>',
         ))
 
     fig.update_layout(
@@ -292,18 +293,19 @@ def generate_svg_preview(embedding, edges, names, families, output_dir: Path, is
             f'stroke="#3b4b5d" stroke-opacity="0.18" stroke-width="1"/>'
         )
 
-    # Generate circles
+    # Generate circles with title for hover
     circles_svg = []
     for i, (x, y) in enumerate(coords):
         family = families[i]
         color = FAMILY_COLORS.get(family, "#a0a0a0")
         circles_svg.append(
-            f'<circle cx="{x:.2f}" cy="{y:.2f}" r="5" fill="{color}"/>'
+            f'<circle cx="{x:.2f}" cy="{y:.2f}" r="5" fill="{color}">'
+            f'<title>{names[i]}</title></circle>'
         )
 
     suffix = "3d" if is_3d else "2d"
     title = "UMAP 3D — LoF/Kernel proof/declaration map" if is_3d else "UMAP 2D — LoF/Kernel proof/declaration map"
-    subtitle = "Points: declarations • Colors: module family • Edges: kNN similarity links (source-text features)"
+    subtitle = "Points: declarations • Colors: module family • Edges: kNN similarity links (hover for names)"
 
     svg = f'''<?xml version="1.0" encoding="utf-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1500" height="900" viewBox="0 0 1500 900" role="img" aria-label="UMAP preview">
@@ -316,6 +318,94 @@ def generate_svg_preview(embedding, edges, names, families, output_dir: Path, is
 </svg>'''
 
     filename = f"lof_kernel_{suffix}_preview.svg"
+    (output_dir / filename).write_text(svg)
+    print(f"Saved: {output_dir / filename}")
+
+
+def generate_animated_3d_preview(embedding, names, families, output_dir: Path):
+    """Generate animated 3D rotating SVG preview (like Sky_PaperPack style)."""
+    if embedding is None or embedding.shape[1] < 3:
+        return
+
+    import math
+
+    # Normalize 3D coordinates
+    emb_3d = embedding[:, :3]
+    min_vals = emb_3d.min(axis=0)
+    max_vals = emb_3d.max(axis=0)
+    ranges = max_vals - min_vals + 1e-10
+    normalized = (emb_3d - min_vals) / ranges  # 0 to 1
+    centered = normalized - 0.5  # -0.5 to 0.5
+
+    # Plot area
+    plot_x, plot_y = 50, 70
+    plot_w, plot_h = 1400, 780
+    cx, cy = plot_x + plot_w / 2, plot_y + plot_h / 2
+
+    # Generate rotation keyframes (72 frames for smooth 14s animation)
+    num_frames = 72
+    duration = 14  # seconds
+
+    circles_svg = []
+    for i in range(len(names)):
+        x3d, y3d, z3d = centered[i]
+        family = families[i]
+        color = FAMILY_COLORS.get(family, "#a0a0a0")
+
+        # Generate keyframe values for cx and cy
+        cx_values = []
+        cy_values = []
+        for frame in range(num_frames):
+            angle = 2 * math.pi * frame / num_frames
+            # Rotate around Y axis
+            rx = x3d * math.cos(angle) + z3d * math.sin(angle)
+            rz = -x3d * math.sin(angle) + z3d * math.cos(angle)
+            ry = y3d
+
+            # Project to 2D with perspective
+            scale = 0.7 / (1.0 - rz * 0.3 + 0.5)
+            px = cx + rx * plot_w * 0.4 * scale
+            py = cy + ry * plot_h * 0.4 * scale
+            cx_values.append(f"{px:.2f}")
+            cy_values.append(f"{py:.2f}")
+
+        cx_str = ";".join(cx_values)
+        cy_str = ";".join(cy_values)
+
+        circles_svg.append(f'''<circle r="4" fill="{color}" stroke="#0b0f14" stroke-width="1">
+  <title>{names[i]}</title>
+  <animate attributeName="cx" dur="{duration}s" repeatCount="indefinite" values="{cx_str}"/>
+  <animate attributeName="cy" dur="{duration}s" repeatCount="indefinite" values="{cy_str}"/>
+</circle>''')
+
+    # Build legend
+    family_counts = {}
+    for f in families:
+        family_counts[f] = family_counts.get(f, 0) + 1
+
+    legend_items = []
+    y_offset = 88
+    for family, count in sorted(family_counts.items(), key=lambda x: -x[1]):
+        if count > 0:
+            color = FAMILY_COLORS.get(family, "#a0a0a0")
+            legend_items.append(
+                f'<rect x="68" y="{y_offset}" width="10" height="10" fill="{color}" stroke="{color}" stroke-width="1"/>'
+                f'<text x="84" y="{y_offset + 9}" fill="#e6eef7" font-size="11" font-family="ui-sans-serif,system-ui">'
+                f'{family} <tspan fill="#b8c7d9">({count})</tspan></text>'
+            )
+            y_offset += 16
+
+    svg = f'''<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="900" viewBox="0 0 1500 900" role="img" aria-label="3D rotating preview">
+<rect x="0" y="0" width="1500" height="900" fill="#0b0f14"/>
+<text x="50" y="32" fill="#ffffff" font-size="20" font-family="ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial">UMAP 3D — LoF/Kernel proof map (animated)</text>
+<text x="50" y="52" fill="#b8c7d9" font-size="12" font-family="ui-sans-serif,system-ui,Segoe UI,Roboto,Helvetica,Arial">Rotating preview • Hover for names • Click interactive link for full controls</text>
+<rect x="{plot_x}" y="{plot_y}" width="{plot_w}" height="{plot_h}" fill="#0f1721" stroke="#1c2a3a" stroke-width="1"/>
+{chr(10).join(legend_items)}
+{chr(10).join(circles_svg)}
+</svg>'''
+
+    filename = "lof_kernel_3d_animated.svg"
     (output_dir / filename).write_text(svg)
     print(f"Saved: {output_dir / filename}")
 
@@ -474,6 +564,7 @@ def main():
                 generate_svg_preview(embedding_2d, edges_2d, names, families, output_dir, is_3d=False)
             if embedding_3d is not None and edges_3d is not None:
                 generate_svg_preview(embedding_3d, edges_3d, names, families, output_dir, is_3d=True)
+                generate_animated_3d_preview(embedding_3d, names, families, output_dir)
     else:
         print("No Lean files found - generating static visuals only")
 
