@@ -42,19 +42,21 @@ instance : ToString Case where
 structure Cfg where
   caseName : Case := .all
   fuelWhnf : Nat := 20
+  fuelDefEq : Nat := 20
   fuelInfer : Nat := 20
   fuelReduce : Nat := 400000
 deriving Repr
 
 private def usage : String :=
   String.intercalate "\n"
-    [ "Usage: full_kernel_sky_demo [--case all|whnf|infer|check] [--fuel-whnf N] [--fuel-infer N] [--fuel-reduce N]"
+    [ "Usage: full_kernel_sky_demo [--case all|whnf|infer|check] [--fuel-whnf N] [--fuel-defeq N] [--fuel-infer N] [--fuel-reduce N]"
     , ""
     , "Phase 25 demo: compile FullKernelSKY (β/ζ/δ/ι + Infer/Check) to SKY and cross-validate."
     , ""
     , "Defaults:"
     , "  --case all"
     , "  --fuel-whnf 20"
+    , "  --fuel-defeq 20"
     , "  --fuel-infer 20"
     , "  --fuel-reduce 400000"
     ]
@@ -76,6 +78,10 @@ private def parseArgs (argv : List String) : IO Cfg := do
         match n.toNat? with
         | some v => go { cfg with fuelWhnf := v } rest
         | none => throw <| IO.userError s!"invalid --fuel-whnf value: {n}"
+    | "--fuel-defeq" :: n :: rest =>
+        match n.toNat? with
+        | some v => go { cfg with fuelDefEq := v } rest
+        | none => throw <| IO.userError s!"invalid --fuel-defeq value: {n}"
     | "--fuel-infer" :: n :: rest =>
         match n.toNat? with
         | some v => go { cfg with fuelInfer := v } rest
@@ -224,9 +230,18 @@ private def runWhnfCase (cfg : Cfg) (k : FullKernelSKY.FullCompiled)
       rules
       cfg.fuelWhnf
       e
-  match FullKernelSKY.runWhnfFullTagFuelWith k cfg.fuelWhnf cfg.fuelReduce envC rulesC e with
-  | none => .error s!"whnf/{name}: SKY tag decode failed"
-  | some tag => expectEq s!"whnf/{name}" tag (exprTag direct)
+  match FullKernelSKY.runWhnfFullCombFuelWith k cfg.fuelWhnf cfg.fuelReduce envC rulesC e,
+        Lean4LeanSKY.Enc.compileExprNatUnit? direct with
+  | some outC, some directC =>
+      match FullKernelSKY.runIsDefEqFullCombFuelWith k cfg.fuelDefEq cfg.fuelReduce envC rulesC outC directC with
+      | some true => .ok ()
+      | some false =>
+          match FullKernelSKY.runWhnfFullTagFuelWith k cfg.fuelWhnf cfg.fuelReduce envC rulesC e with
+          | none => .error s!"whnf/{name}: SKY output mismatch (and tag decode failed)"
+          | some tag => .error s!"whnf/{name}: SKY output mismatch (tag={tag}, expectedTag={exprTag direct})"
+      | none => .error s!"whnf/{name}: SKY defeq bool decode failed"
+  | none, _ => .error s!"whnf/{name}: SKY WHNF comb eval failed"
+  | _, none => .error s!"whnf/{name}: failed to compile expected expression to Comb"
 
 private def runInferCase (cfg : Cfg) (k : FullKernelSKY.FullCompiled)
     (envC rulesC : Comb) (name : String) (env : Environment.Env Nat Unit Unit Unit) (e : E) :
@@ -234,13 +249,25 @@ private def runInferCase (cfg : Cfg) (k : FullKernelSKY.FullCompiled)
   let cfg0 := (Environment.Env.toInferConfig (Name := Nat) (Param := Unit) (MetaLevel := Unit) (MetaExpr := Unit) env)
   let ctx0 : Infer.Ctx Nat Unit Unit Unit := .empty
   let direct := Infer.infer? (Name := Nat) (Param := Unit) (MetaLevel := Unit) (MetaExpr := Unit) cfg0 cfg.fuelInfer ctx0 e
-  let directTag? := direct.map exprTag
-  let skyTag? := FullKernelSKY.runInferFullTagFuelWith k cfg.fuelInfer cfg.fuelReduce envC rulesC e
-  match directTag?, skyTag? with
-  | none, none => .ok ()
-  | some dt, some st => expectEq s!"infer/{name}" st dt
-  | none, some st => .error s!"infer/{name}: expected none, got {st}"
-  | some dt, none => .error s!"infer/{name}: expected {dt}, got none"
+  match FullKernelSKY.runInferFullOptCombFuelWith k cfg.fuelInfer cfg.fuelReduce envC rulesC e with
+  | none => .error s!"infer/{name}: SKY infer comb eval failed"
+  | some outOpt =>
+      let skyTy? := FullKernelSKY.decodeOptExprCombFuel cfg.fuelReduce outOpt
+      match direct, skyTy? with
+      | none, none => .ok ()
+      | some directTy, some skyTy =>
+          match Lean4LeanSKY.Enc.compileExprNatUnit? directTy with
+          | none => .error s!"infer/{name}: failed to compile expected type to Comb"
+          | some directTyC =>
+              match FullKernelSKY.runIsDefEqFullCombFuelWith k cfg.fuelDefEq cfg.fuelReduce envC rulesC skyTy directTyC with
+              | some true => .ok ()
+              | some false =>
+                  match FullKernelSKY.runInferFullTagFuelWith k cfg.fuelInfer cfg.fuelReduce envC rulesC e with
+                  | none => .error s!"infer/{name}: SKY type mismatch (and tag decode failed)"
+                  | some st => .error s!"infer/{name}: SKY type mismatch (gotTag={st}, expectedTag={exprTag directTy})"
+              | none => .error s!"infer/{name}: SKY defeq bool decode failed"
+      | none, some _ => .error s!"infer/{name}: expected none, got some"
+      | some _, none => .error s!"infer/{name}: expected some, got none"
 
 private def runCheckCase (cfg : Cfg) (k : FullKernelSKY.FullCompiled)
     (envC rulesC : Comb) (name : String) (env : Environment.Env Nat Unit Unit Unit) (e ty : E) :
@@ -314,4 +341,3 @@ end HeytingLean.CLI.FullKernelSKYMain
 open HeytingLean.CLI.FullKernelSKYMain in
 def main (args : List String) : IO UInt32 :=
   HeytingLean.CLI.FullKernelSKYMain.main args
-

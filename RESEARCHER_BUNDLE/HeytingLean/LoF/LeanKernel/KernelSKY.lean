@@ -64,10 +64,20 @@ def runWhnfTagFuelWith (k : Compiled) (fuelWhnf fuelReduce : Nat) (e : E) : Opti
   let out := SKYExec.reduceFuel fuelReduce (Comb.app (Comb.app k.whnf fuelC) eC)
   Lean4LeanSKY.Decode.exprTagFuel fuelReduce out
 
+def runWhnfCombFuelWith (k : Compiled) (fuelWhnf fuelReduce : Nat) (e : E) : Option Comb := do
+  let fuelC <- encodeNatComb? fuelWhnf
+  let eC <- compileExprNatUnit? e
+  some <| SKYExec.reduceFuel fuelReduce (Comb.app (Comb.app k.whnf fuelC) eC)
+
 def runIsDefEqFuelWith (k : Compiled) (fuelDefEq fuelReduce : Nat) (e1 e2 : E) : Option Bool := do
   let fuelC <- encodeNatComb? fuelDefEq
   let e1C <- compileExprNatUnit? e1
   let e2C <- compileExprNatUnit? e2
+  let out := SKYExec.reduceFuel fuelReduce (Comb.app (Comb.app (Comb.app k.isDefEq fuelC) e1C) e2C)
+  SKYExec.decodeChurchBoolFuel fuelReduce out
+
+def runIsDefEqCombFuelWith (k : Compiled) (fuelDefEq fuelReduce : Nat) (e1C e2C : Comb) : Option Bool := do
+  let fuelC <- encodeNatComb? fuelDefEq
   let out := SKYExec.reduceFuel fuelReduce (Comb.app (Comb.app (Comb.app k.isDefEq fuelC) e1C) e2C)
   SKYExec.decodeChurchBoolFuel fuelReduce out
 
@@ -82,11 +92,23 @@ def decodeOptExprTagFuel (fuelReduce : Nat) (optExpr : Comb) : Option String :=
   else
     Lean4LeanSKY.Decode.exprTagFuel fuelReduce out
 
+def decodeOptExprCombFuel (fuelReduce : Nat) (optExpr : Comb) : Option Comb :=
+  let out := SKYExec.reduceFuel fuelReduce (Comb.app (Comb.app optExpr Comb.K) Comb.I)
+  if out = Comb.K then
+    none
+  else
+    some out
+
 def runInferTagFuelWith (k : Compiled) (fuelInfer fuelReduce : Nat) (e : E) : Option String := do
   let fuelC <- encodeNatComb? fuelInfer
   let eC <- compileExprNatUnit? e
   let outOpt := SKYExec.reduceFuel fuelReduce (Comb.app (Comb.app (Comb.app k.infer fuelC) k.emptyCtx) eC)
   decodeOptExprTagFuel fuelReduce outOpt
+
+def runInferOptCombFuelWith (k : Compiled) (fuelInfer fuelReduce : Nat) (e : E) : Option Comb := do
+  let fuelC <- encodeNatComb? fuelInfer
+  let eC <- compileExprNatUnit? e
+  some <| SKYExec.reduceFuel fuelReduce (Comb.app (Comb.app (Comb.app k.infer fuelC) k.emptyCtx) eC)
 
 def runCheckFuelWith (k : Compiled) (fuel fuelReduce : Nat) (e ty : E) : Option Bool := do
   let fuelC <- encodeNatComb? fuel
@@ -119,4 +141,3 @@ end KernelSKY
 end LeanKernel
 end LoF
 end HeytingLean
-

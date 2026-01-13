@@ -123,6 +123,14 @@ def runWhnfDeltaTagFuel (fuelWhnf fuelReduce : Nat) (us : List (ULevel Unit Unit
   let out := SKYExec.reduceFuel fuelReduce (Comb.app (Comb.app (Comb.app whnf envC) fuelC) eC)
   Lean4LeanSKY.Decode.exprTagFuel fuelReduce out
 
+def runWhnfDeltaCombFuel (fuelWhnf fuelReduce : Nat) (us : List (ULevel Unit Unit))
+    (env : Environment.Env Nat Unit Unit Unit) (e : Expr Nat Unit Unit Unit) : Option Comb := do
+  let whnf <- whnfDeltaComb?
+  let envC <- EnvironmentSKY.envComb? us env
+  let fuelC <- encodeNatComb? fuelWhnf
+  let eC <- Lean4LeanSKY.Enc.compileExprNatUnit? e
+  some <| SKYExec.reduceFuel fuelReduce (Comb.app (Comb.app (Comb.app whnf envC) fuelC) eC)
+
 end WHNFDeltaSKY
 
 end LeanKernel

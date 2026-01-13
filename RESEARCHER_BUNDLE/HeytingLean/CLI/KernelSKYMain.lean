@@ -253,12 +253,20 @@ private def runEnvConstCase (cfg : Cfg) (label : String) (env : Environment.Env 
 private def runWhnfCase (cfg : Cfg) (k : KernelSKY.Compiled) (name : String) (e : E) :
     Except String Unit :=
   let direct := WHNF.whnf (Name := Nat) (Param := Unit) (MetaLevel := Unit) (MetaExpr := Unit) cfg.fuelWhnf e
-  match KernelSKY.runWhnfTagFuelWith k cfg.fuelWhnf cfg.fuelReduce e with
-  | none => .error s!"whnf/{name}: SKY tag decode failed"
-  | some tag =>
-      expectEq s!"whnf/{name}" tag (exprTag direct)
+  match KernelSKY.runWhnfCombFuelWith k cfg.fuelWhnf cfg.fuelReduce e, KernelSKY.compileExprNatUnit? direct with
+  | some outC, some directC =>
+      match KernelSKY.runIsDefEqCombFuelWith k cfg.fuelDefEq cfg.fuelReduce outC directC with
+      | some true => .ok ()
+      | some false =>
+          match KernelSKY.runWhnfTagFuelWith k cfg.fuelWhnf cfg.fuelReduce e with
+          | none => .error s!"whnf/{name}: SKY output mismatch (and tag decode failed)"
+          | some tag => .error s!"whnf/{name}: SKY output mismatch (tag={tag}, expectedTag={exprTag direct})"
+      | none => .error s!"whnf/{name}: SKY defeq bool decode failed"
+  | none, _ => .error s!"whnf/{name}: SKY WHNF comb eval failed"
+  | _, none => .error s!"whnf/{name}: failed to compile expected expression to Comb"
 
-private def runDeltaCase (cfg : Cfg) (name : String) (env : Environment.Env Nat Unit Unit Unit) (e : E) :
+private def runDeltaCase (cfg : Cfg) (k : KernelSKY.Compiled) (name : String)
+    (env : Environment.Env Nat Unit Unit Unit) (e : E) :
     Except String Unit :=
   let us : List (ULevel Unit Unit) := []
   let direct :=
@@ -267,12 +275,20 @@ private def runDeltaCase (cfg : Cfg) (name : String) (env : Environment.Env Nat 
       (Inductive.IotaRules.empty (Name := Nat))
       cfg.fuelWhnf
       e
-  match WHNFDeltaSKY.runWhnfDeltaTagFuel cfg.fuelWhnf cfg.fuelReduce us env e with
-  | none => .error s!"delta/{name}: SKY tag decode failed"
-  | some tag =>
-      expectEq s!"delta/{name}" tag (exprTag direct)
+  match WHNFDeltaSKY.runWhnfDeltaCombFuel cfg.fuelWhnf cfg.fuelReduce us env e, KernelSKY.compileExprNatUnit? direct with
+  | some outC, some directC =>
+      match KernelSKY.runIsDefEqCombFuelWith k cfg.fuelDefEq cfg.fuelReduce outC directC with
+      | some true => .ok ()
+      | some false =>
+          match WHNFDeltaSKY.runWhnfDeltaTagFuel cfg.fuelWhnf cfg.fuelReduce us env e with
+          | none => .error s!"delta/{name}: SKY output mismatch (and tag decode failed)"
+          | some tag => .error s!"delta/{name}: SKY output mismatch (tag={tag}, expectedTag={exprTag direct})"
+      | none => .error s!"delta/{name}: SKY defeq bool decode failed"
+  | none, _ => .error s!"delta/{name}: SKY WHNF-δ comb eval failed"
+  | _, none => .error s!"delta/{name}: failed to compile expected expression to Comb"
 
-private def runIotaCase (cfg : Cfg) (name : String) (rules : Inductive.IotaRules Nat) (e : E) :
+private def runIotaCase (cfg : Cfg) (k : KernelSKY.Compiled) (name : String)
+    (rules : Inductive.IotaRules Nat) (e : E) :
     Except String Unit :=
   let direct :=
     WHNF.whnfWith (Name := Nat) (Param := Unit) (MetaLevel := Unit) (MetaExpr := Unit) rules cfg.fuelWhnf e
@@ -280,10 +296,17 @@ private def runIotaCase (cfg : Cfg) (name : String) (rules : Inductive.IotaRules
     WHNFIotaSKY.Enc.casesOnSpec 100 1 [ (101, 0), (102, 1) ]
   let rulesL :=
     WHNFIotaSKY.Enc.iotaRules [specL]
-  match WHNFIotaSKY.runWhnfIotaTagFuel cfg.fuelWhnf cfg.fuelReduce rulesL e with
-  | none => .error s!"iota/{name}: SKY tag decode failed"
-  | some tag =>
-      expectEq s!"iota/{name}" tag (exprTag direct)
+  match WHNFIotaSKY.runWhnfIotaCombFuel cfg.fuelWhnf cfg.fuelReduce rulesL e, KernelSKY.compileExprNatUnit? direct with
+  | some outC, some directC =>
+      match KernelSKY.runIsDefEqCombFuelWith k cfg.fuelDefEq cfg.fuelReduce outC directC with
+      | some true => .ok ()
+      | some false =>
+          match WHNFIotaSKY.runWhnfIotaTagFuel cfg.fuelWhnf cfg.fuelReduce rulesL e with
+          | none => .error s!"iota/{name}: SKY output mismatch (and tag decode failed)"
+          | some tag => .error s!"iota/{name}: SKY output mismatch (tag={tag}, expectedTag={exprTag direct})"
+      | none => .error s!"iota/{name}: SKY defeq bool decode failed"
+  | none, _ => .error s!"iota/{name}: SKY WHNF-ι comb eval failed"
+  | _, none => .error s!"iota/{name}: failed to compile expected expression to Comb"
 
 private def runFullCase (cfg : Cfg) (k : FullKernelSKY.FullCompiled) (name : String)
     (env : Environment.Env Nat Unit Unit Unit) (rules : Inductive.IotaRules Nat) (e : E) :
@@ -301,9 +324,18 @@ private def runFullCase (cfg : Cfg) (k : FullKernelSKY.FullCompiled) (name : Str
     WHNFIotaSKY.Enc.iotaRules [specL]
   match EnvironmentSKY.envComb? us env, WHNFIotaSKY.compileClosed? rulesL with
   | some envC, some rulesC =>
-      match FullKernelSKY.runWhnfFullTagFuelWith k cfg.fuelWhnf cfg.fuelReduce envC rulesC e with
-      | none => .error s!"full/{name}: SKY tag decode failed"
-      | some tag => expectEq s!"full/{name}" tag (exprTag direct)
+      match FullKernelSKY.runWhnfFullCombFuelWith k cfg.fuelWhnf cfg.fuelReduce envC rulesC e,
+            Lean4LeanSKY.Enc.compileExprNatUnit? direct with
+      | some outC, some directC =>
+          match FullKernelSKY.runIsDefEqFullCombFuelWith k cfg.fuelDefEq cfg.fuelReduce envC rulesC outC directC with
+          | some true => .ok ()
+          | some false =>
+              match FullKernelSKY.runWhnfFullTagFuelWith k cfg.fuelWhnf cfg.fuelReduce envC rulesC e with
+              | none => .error s!"full/{name}: SKY output mismatch (and tag decode failed)"
+              | some tag => .error s!"full/{name}: SKY output mismatch (tag={tag}, expectedTag={exprTag direct})"
+          | none => .error s!"full/{name}: SKY defeq bool decode failed"
+      | none, _ => .error s!"full/{name}: SKY WHNF-full comb eval failed"
+      | _, none => .error s!"full/{name}: failed to compile expected expression to Comb"
   | none, _ => .error s!"full/{name}: failed to compile environment to SKY"
   | _, none => .error s!"full/{name}: failed to compile iota rules to SKY"
 
@@ -322,13 +354,25 @@ private def runInferCase (cfg : Cfg) (k : KernelSKY.Compiled) (name : String) (e
   let ctx0 : Infer.Ctx Nat Unit Unit Unit := .empty
   let direct :=
     Infer.infer? (Name := Nat) (Param := Unit) (MetaLevel := Unit) (MetaExpr := Unit) cfg0 cfg.fuelInfer ctx0 e
-  let directTag? := direct.map exprTag
-  let skyTag? := KernelSKY.runInferTagFuelWith k cfg.fuelInfer cfg.fuelReduce e
-  match directTag?, skyTag? with
-  | none, none => .ok ()
-  | some dt, some st => expectEq s!"infer/{name}" st dt
-  | none, some st => .error s!"infer/{name}: expected none, got {st}"
-  | some dt, none => .error s!"infer/{name}: expected {dt}, got none"
+  match KernelSKY.runInferOptCombFuelWith k cfg.fuelInfer cfg.fuelReduce e with
+  | none => .error s!"infer/{name}: SKY infer comb eval failed"
+  | some outOpt =>
+      let skyTy? := KernelSKY.decodeOptExprCombFuel cfg.fuelReduce outOpt
+      match direct, skyTy? with
+      | none, none => .ok ()
+      | some directTy, some skyTy =>
+          match KernelSKY.compileExprNatUnit? directTy with
+          | none => .error s!"infer/{name}: failed to compile expected type to Comb"
+          | some directTyC =>
+              match KernelSKY.runIsDefEqCombFuelWith k cfg.fuelDefEq cfg.fuelReduce skyTy directTyC with
+              | some true => .ok ()
+              | some false =>
+                  match KernelSKY.runInferTagFuelWith k cfg.fuelInfer cfg.fuelReduce e with
+                  | none => .error s!"infer/{name}: SKY type mismatch (and tag decode failed)"
+                  | some st => .error s!"infer/{name}: SKY type mismatch (gotTag={st}, expectedTag={exprTag directTy})"
+              | none => .error s!"infer/{name}: SKY defeq bool decode failed"
+      | none, some _ => .error s!"infer/{name}: expected none, got some"
+      | some _, none => .error s!"infer/{name}: expected some, got none"
 
 private def runCheckCase (cfg : Cfg) (k : KernelSKY.Compiled) (name : String) (e ty : E) :
     Except String Unit :=
@@ -377,7 +421,7 @@ private def runAll (cfg : Cfg) : IO UInt32 := do
       let deltaErrs :=
         if cfg.caseName == .delta || cfg.caseName == .all then
           mkCasesDelta.foldl (init := ([] : List String)) fun acc (nm, e) =>
-            match runDeltaCase cfg nm mkEnv e with
+            match runDeltaCase cfg k nm mkEnv e with
             | .ok () => acc
             | .error msg => msg :: acc
         else
@@ -386,7 +430,7 @@ private def runAll (cfg : Cfg) : IO UInt32 := do
       let iotaErrs :=
         if cfg.caseName == .iota || cfg.caseName == .all then
           mkCasesIota.foldl (init := ([] : List String)) fun acc (nm, e) =>
-            match runIotaCase cfg nm mkIotaRules e with
+            match runIotaCase cfg k nm mkIotaRules e with
             | .ok () => acc
             | .error msg => msg :: acc
         else

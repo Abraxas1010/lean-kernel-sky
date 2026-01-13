@@ -345,6 +345,13 @@ def runWhnfIotaTagFuel (fuelWhnf fuelReduce : Nat) (rules : L) (e : Expr Nat Uni
   let out := SKYExec.reduceFuel fuelReduce (Comb.app (Comb.app (Comb.app whnf rulesC) fuelC) eC)
   Lean4LeanSKY.Decode.exprTagFuel fuelReduce out
 
+def runWhnfIotaCombFuel (fuelWhnf fuelReduce : Nat) (rules : L) (e : Expr Nat Unit Unit Unit) : Option Comb := do
+  let whnf <- whnfIotaComb?
+  let rulesC <- compileClosed? rules
+  let fuelC <- encodeNatComb? fuelWhnf
+  let eC <- Lean4LeanSKY.Enc.compileExprNatUnit? e
+  some <| SKYExec.reduceFuel fuelReduce (Comb.app (Comb.app (Comb.app whnf rulesC) fuelC) eC)
+
 end WHNFIotaSKY
 
 end LeanKernel
