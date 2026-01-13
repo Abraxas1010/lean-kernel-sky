@@ -6,7 +6,7 @@
     </marker>
   </defs>
 
-  <rect width="900" height="400" fill="#1a1a2e"/>
+  <rect width="900" height="400" fill="#0b0f14"/>
   <text x="450" y="30" text-anchor="middle" fill="#e94560" font-family="Arial" font-size="18" font-weight="bold">Lean Kernel → SKY Pipeline</text>
 
   <!-- Phase boxes -->

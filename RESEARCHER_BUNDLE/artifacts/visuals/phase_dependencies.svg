@@ -6,7 +6,7 @@
     </marker>
   </defs>
 
-  <rect width="700" height="500" fill="#1a1a2e"/>
+  <rect width="700" height="500" fill="#0b0f14"/>
   <text x="350" y="25" text-anchor="middle" fill="#e94560" font-family="Arial" font-size="16" font-weight="bold">Phase Dependencies</text>
 
   <!-- Row 1: Data Plane -->

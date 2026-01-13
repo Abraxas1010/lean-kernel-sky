@@ -1,25 +1,125 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
-  <rect width="400" height="300" fill="#1a1a2e"/>
-  <text x="200" y="25" text-anchor="middle" fill="#e94560" font-family="Arial" font-size="14" font-weight="bold">3D Module Map</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
+  <rect width="800" height="600" fill="#0b0f14"/>
+  <text x="400" y="25" text-anchor="middle" fill="#e94560" font-family="Arial" font-size="16" font-weight="bold">3D Module Map</text>
 
-  <!-- 3D perspective ellipse -->
-  <ellipse cx="200" cy="160" rx="160" ry="90" fill="none" stroke="#2d3436" stroke-width="1"/>
+  <!-- Connection lines -->
+  <g stroke="rgba(207,216,220,0.25)" stroke-width="0.5">
+    <line x1="552.0" y1="222.8" x2="537.8" y2="272.7"/>
+    <line x1="552.0" y1="222.8" x2="77.8" y2="519.8"/>
+    <line x1="551.5" y1="254.1" x2="537.8" y2="272.7"/>
+    <line x1="537.8" y1="272.7" x2="718.4" y2="197.0"/>
+    <line x1="77.8" y1="519.8" x2="718.4" y2="197.0"/>
+    <line x1="77.8" y1="519.8" x2="472.9" y2="273.1"/>
+    <line x1="718.4" y1="197.0" x2="472.9" y2="273.1"/>
+    <line x1="718.4" y1="197.0" x2="91.3" y2="520.3"/>
+    <line x1="472.9" y1="273.1" x2="740.4" y2="107.6"/>
+    <line x1="91.3" y1="520.3" x2="500.9" y2="271.4"/>
+    <line x1="740.4" y1="107.6" x2="566.2" y2="285.8"/>
+    <line x1="500.9" y1="271.4" x2="143.0" y2="453.4"/>
+    <line x1="548.1" y1="291.3" x2="566.2" y2="285.8"/>
+    <line x1="744.3" y1="173.4" x2="477.6" y2="253.1"/>
+    <line x1="124.3" y1="520.4" x2="185.1" y2="411.1"/>
+    <line x1="124.3" y1="520.4" x2="477.6" y2="253.1"/>
+    <line x1="124.3" y1="520.4" x2="40.0" y2="560.0"/>
+    <line x1="185.1" y1="411.1" x2="477.6" y2="253.1"/>
+    <line x1="185.1" y1="411.1" x2="40.0" y2="560.0"/>
+    <line x1="185.1" y1="411.1" x2="71.6" y2="481.9"/>
+    <line x1="40.0" y1="560.0" x2="71.6" y2="481.9"/>
+    <line x1="40.0" y1="560.0" x2="51.8" y2="536.8"/>
+    <line x1="71.6" y1="481.9" x2="759.2" y2="142.2"/>
+    <line x1="51.8" y1="536.8" x2="759.2" y2="142.2"/>
+    <line x1="695.0" y1="58.9" x2="416.2" y2="219.8"/>
+    <line x1="695.0" y1="58.9" x2="242.3" y2="354.8"/>
+    <line x1="416.2" y1="219.8" x2="242.3" y2="354.8"/>
+    <line x1="416.2" y1="219.8" x2="694.4" y2="182.0"/>
+    <line x1="453.0" y1="248.7" x2="604.0" y2="148.9"/>
+    <line x1="453.0" y1="248.7" x2="81.2" y2="494.6"/>
+    <line x1="604.0" y1="148.9" x2="81.2" y2="494.6"/>
+    <line x1="81.2" y1="494.6" x2="755.3" y2="41.3"/>
+    <line x1="652.8" y1="40.0" x2="703.4" y2="105.2"/>
+    <line x1="652.8" y1="40.0" x2="534.5" y2="243.2"/>
+    <line x1="755.3" y1="41.3" x2="703.4" y2="105.2"/>
+    <line x1="703.4" y1="105.2" x2="756.2" y2="86.0"/>
+    <line x1="756.2" y1="86.0" x2="539.4" y2="249.4"/>
+    <line x1="580.7" y1="271.6" x2="411.9" y2="245.2"/>
+    <line x1="539.4" y1="249.4" x2="411.9" y2="245.2"/>
+    <line x1="411.9" y1="245.2" x2="740.6" y2="176.2"/>
+    <line x1="411.9" y1="245.2" x2="588.8" y2="120.6"/>
+    <line x1="740.6" y1="176.2" x2="155.3" y2="537.7"/>
+    <line x1="732.5" y1="78.6" x2="196.7" y2="409.7"/>
+    <line x1="155.3" y1="537.7" x2="493.1" y2="224.0"/>
+    <line x1="196.7" y1="409.7" x2="493.1" y2="224.0"/>
+    <line x1="493.1" y1="224.0" x2="86.4" y2="470.2"/>
+    <line x1="760.0" y1="42.2" x2="405.5" y2="226.2"/>
+    <line x1="46.9" y1="554.7" x2="405.5" y2="226.2"/>
+    <line x1="86.4" y1="470.2" x2="670.9" y2="253.6"/>
+    <line x1="405.5" y1="226.2" x2="704.7" y2="262.7"/>
+    <line x1="670.9" y1="253.6" x2="564.3" y2="281.7"/>
+  </g>
 
-  <!-- Scattered points with depth effect -->
-  <circle cx="100" cy="120" r="12" fill="#6c5ce7" opacity="0.9"/>
-  <circle cx="150" cy="100" r="8" fill="#00b894" opacity="0.8"/>
-  <circle cx="220" cy="130" r="14" fill="#e17055" opacity="0.95"/>
-  <circle cx="280" cy="110" r="10" fill="#e94560" opacity="0.85"/>
-  <circle cx="180" cy="180" r="11" fill="#0984e3" opacity="0.9"/>
-  <circle cx="250" cy="190" r="9" fill="#e94560" opacity="0.75"/>
-  <circle cx="130" cy="170" r="7" fill="#6c5ce7" opacity="0.7"/>
-  <circle cx="300" cy="170" r="8" fill="#00b894" opacity="0.8"/>
+  <!-- Module points -->
+  <circle cx="552.0" cy="222.8" r="8.8" fill="#6c5ce7" opacity="0.92"/>
+  <circle cx="551.5" cy="254.1" r="12.0" fill="#e17055" opacity="0.79"/>
+  <circle cx="537.8" cy="272.7" r="9.8" fill="#e17055" opacity="0.89"/>
+  <circle cx="77.8" cy="519.8" r="8.5" fill="#00b894" opacity="0.86"/>
+  <circle cx="718.4" cy="197.0" r="9.4" fill="#e17055" opacity="0.77"/>
+  <circle cx="472.9" cy="273.1" r="8.9" fill="#00b894" opacity="0.88"/>
+  <circle cx="91.3" cy="520.3" r="8.3" fill="#00b894" opacity="0.77"/>
+  <circle cx="740.4" cy="107.6" r="8.9" fill="#6c5ce7" opacity="0.89"/>
+  <circle cx="500.9" cy="271.4" r="11.4" fill="#00b894" opacity="0.97"/>
+  <circle cx="548.1" cy="291.3" r="9.0" fill="#00b894" opacity="0.72"/>
+  <circle cx="566.2" cy="285.8" r="8.9" fill="#00b894" opacity="0.90"/>
+  <circle cx="143.0" cy="453.4" r="11.7" fill="#00b894" opacity="0.74"/>
+  <circle cx="427.0" cy="218.9" r="9.9" fill="#00b894" opacity="0.87"/>
+  <circle cx="744.3" cy="173.4" r="11.2" fill="#e17055" opacity="0.94"/>
+  <circle cx="124.3" cy="520.4" r="8.4" fill="#00b894" opacity="0.76"/>
+  <circle cx="185.1" cy="411.1" r="9.7" fill="#6c5ce7" opacity="0.83"/>
+  <circle cx="477.6" cy="253.1" r="10.9" fill="#00b894" opacity="0.84"/>
+  <circle cx="40.0" cy="560.0" r="11.9" fill="#00b894" opacity="0.90"/>
+  <circle cx="71.6" cy="481.9" r="9.6" fill="#6c5ce7" opacity="0.73"/>
+  <circle cx="51.8" cy="536.8" r="11.4" fill="#00b894" opacity="0.80"/>
+  <circle cx="673.2" cy="42.3" r="8.8" fill="#0984e3" opacity="0.77"/>
+  <circle cx="759.2" cy="142.2" r="9.7" fill="#a0a0a0" opacity="0.83"/>
+  <circle cx="695.0" cy="58.9" r="9.0" fill="#0984e3" opacity="0.78"/>
+  <circle cx="416.2" cy="219.8" r="9.8" fill="#a0a0a0" opacity="0.98"/>
+  <circle cx="242.3" cy="354.8" r="10.2" fill="#a0a0a0" opacity="0.96"/>
+  <circle cx="694.4" cy="182.0" r="12.0" fill="#e17055" opacity="0.72"/>
+  <circle cx="453.0" cy="248.7" r="11.9" fill="#00b894" opacity="0.95"/>
+  <circle cx="604.0" cy="148.9" r="11.4" fill="#0984e3" opacity="0.98"/>
+  <circle cx="81.2" cy="494.6" r="9.9" fill="#00b894" opacity="0.75"/>
+  <circle cx="652.8" cy="40.0" r="9.6" fill="#0984e3" opacity="0.76"/>
+  <circle cx="755.3" cy="41.3" r="9.5" fill="#0984e3" opacity="0.72"/>
+  <circle cx="703.4" cy="105.2" r="9.1" fill="#6c5ce7" opacity="1.00"/>
+  <circle cx="534.5" cy="243.2" r="9.8" fill="#00b894" opacity="0.94"/>
+  <circle cx="756.2" cy="86.0" r="11.8" fill="#0984e3" opacity="0.83"/>
+  <circle cx="580.7" cy="271.6" r="10.2" fill="#00b894" opacity="1.00"/>
+  <circle cx="539.4" cy="249.4" r="8.6" fill="#00b894" opacity="0.92"/>
+  <circle cx="169.0" cy="461.7" r="11.9" fill="#00b894" opacity="0.79"/>
+  <circle cx="411.9" cy="245.2" r="10.2" fill="#00b894" opacity="0.87"/>
+  <circle cx="740.6" cy="176.2" r="8.2" fill="#e17055" opacity="0.92"/>
+  <circle cx="732.5" cy="78.6" r="10.0" fill="#a0a0a0" opacity="0.88"/>
+  <circle cx="588.8" cy="120.6" r="8.6" fill="#0984e3" opacity="0.96"/>
+  <circle cx="155.3" cy="537.7" r="8.3" fill="#00b894" opacity="0.99"/>
+  <circle cx="196.7" cy="409.7" r="10.4" fill="#6c5ce7" opacity="0.76"/>
+  <circle cx="493.1" cy="224.0" r="8.9" fill="#00b894" opacity="0.90"/>
+  <circle cx="760.0" cy="42.2" r="11.6" fill="#0984e3" opacity="0.74"/>
+  <circle cx="46.9" cy="554.7" r="10.4" fill="#00b894" opacity="0.77"/>
+  <circle cx="86.4" cy="470.2" r="9.7" fill="#6c5ce7" opacity="0.89"/>
+  <circle cx="405.5" cy="226.2" r="10.1" fill="#0984e3" opacity="0.88"/>
+  <circle cx="670.9" cy="253.6" r="8.8" fill="#fd79a8" opacity="0.98"/>
+  <circle cx="704.7" cy="262.7" r="9.0" fill="#fd79a8" opacity="0.91"/>
+  <circle cx="564.3" cy="281.7" r="10.7" fill="#636e72" opacity="0.82"/>
 
-  <!-- Depth lines -->
-  <line x1="100" y1="120" x2="90" y2="200" stroke="#6c5ce7" stroke-width="1" opacity="0.3"/>
-  <line x1="220" y1="130" x2="210" y2="210" stroke="#e17055" stroke-width="1" opacity="0.3"/>
-  <line x1="280" y1="110" x2="270" y2="190" stroke="#e94560" stroke-width="1" opacity="0.3"/>
+  <!-- Legend -->
+  <g transform="translate(20, 500)">
+    <rect x="0" y="0" width="12" height="12" fill="#6c5ce7"/><text x="18" y="10" fill="#a0a0a0" font-size="9">DataPlane</text>
+    <rect x="0" y="18" width="12" height="12" fill="#00b894"/><text x="18" y="28" fill="#a0a0a0" font-size="9">NativeKernel</text>
+    <rect x="100" y="0" width="12" height="12" fill="#e17055"/><text x="118" y="10" fill="#a0a0a0" font-size="9">ComputationPlane</text>
+    <rect x="100" y="18" width="12" height="12" fill="#e94560"/><text x="118" y="28" fill="#a0a0a0" font-size="9">FullKernel</text>
+    <rect x="230" y="0" width="12" height="12" fill="#0984e3"/><text x="248" y="10" fill="#a0a0a0" font-size="9">Combinators</text>
+    <rect x="230" y="18" width="12" height="12" fill="#fd79a8"/><text x="248" y="28" fill="#a0a0a0" font-size="9">Foundation</text>
+  </g>
 
-  <text x="200" y="280" text-anchor="middle" fill="#60a5fa" font-family="Arial" font-size="10">Click to open interactive 3D view</text>
+  <text x="400" y="585" text-anchor="middle" fill="#60a5fa" font-family="Arial" font-size="10">Click to open interactive view</text>
 </svg>

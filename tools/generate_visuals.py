@@ -3,7 +3,7 @@
 generate_visuals.py - Generate UMAP visualizations for Lean Kernel → SKY
 
 Generates:
-1. 2D UMAP embedding (HTML + SVG preview)
+1. 2D UMAP embedding (HTML + SVG preview with connection lines)
 2. 3D UMAP embedding (HTML + SVG preview)
 3. Pipeline overview diagram (SVG)
 4. Phase dependency graph (SVG)
@@ -19,6 +19,7 @@ Usage:
 import json
 import os
 import sys
+import random
 from pathlib import Path
 
 try:
@@ -50,7 +51,8 @@ MODULE_FAMILIES = {
     "NativeKernel": ["WHNF", "DefEq", "Inductive", "Infer", "Environment"],
     "ComputationPlane": ["WHNFSKY", "DefEqSKY", "InferSKY", "KernelSKY", "KernelSKYMain"],
     "FullKernel": ["EnvironmentSKY", "WHNFDeltaSKY", "WHNFIotaSKY", "FullKernelSKY", "FullKernelSKYMain"],
-    "Combinators": ["SKY", "BracketAbstraction", "SKYExec", "SKYMachineBounded"],
+    "Combinators": ["SKY", "BracketAbstraction", "SKYExec", "SKYMachineBounded", "Denotational", "GraphReduction"],
+    "Foundation": ["Blocks", "Soundness"],
     "Tests": ["LeanKernelSanity"],
 }
 
@@ -61,6 +63,7 @@ FAMILY_COLORS = {
     "ComputationPlane": "#e17055", # Orange
     "FullKernel": "#e94560",     # Red/Pink
     "Combinators": "#0984e3",    # Blue
+    "Foundation": "#fd79a8",     # Pink
     "Tests": "#636e72",          # Gray
     "Other": "#a0a0a0",
 }
@@ -107,7 +110,7 @@ def generate_umap_2d(texts, names, families, output_dir: Path):
     """Generate 2D UMAP visualization."""
     if not (HAS_SKLEARN and HAS_UMAP and HAS_PLOTLY):
         print("Skipping 2D UMAP: missing dependencies")
-        return
+        return None
 
     vectorizer = TfidfVectorizer(max_features=1000, stop_words='english')
     X = vectorizer.fit_transform(texts)
@@ -134,8 +137,8 @@ def generate_umap_2d(texts, names, families, output_dir: Path):
     fig.update_layout(
         title="Lean Kernel → SKY: 2D Module Map",
         template="plotly_dark",
-        paper_bgcolor="#1a1a2e",
-        plot_bgcolor="#16213e",
+        paper_bgcolor="#0b0f14",
+        plot_bgcolor="#0b0f14",
         showlegend=True,
         legend=dict(
             bgcolor="rgba(0,0,0,0.5)",
@@ -146,12 +149,14 @@ def generate_umap_2d(texts, names, families, output_dir: Path):
     fig.write_html(str(output_dir / "kernel_2d.html"))
     print(f"Saved: {output_dir / 'kernel_2d.html'}")
 
+    return embedding
+
 
 def generate_umap_3d(texts, names, families, output_dir: Path):
     """Generate 3D UMAP visualization."""
     if not (HAS_SKLEARN and HAS_UMAP and HAS_PLOTLY):
         print("Skipping 3D UMAP: missing dependencies")
-        return
+        return None
 
     vectorizer = TfidfVectorizer(max_features=1000, stop_words='english')
     X = vectorizer.fit_transform(texts)
@@ -177,88 +182,94 @@ def generate_umap_3d(texts, names, families, output_dir: Path):
     fig.update_layout(
         title="Lean Kernel → SKY: 3D Module Map",
         template="plotly_dark",
-        paper_bgcolor="#1a1a2e",
-        scene=dict(bgcolor="#16213e"),
+        paper_bgcolor="#0b0f14",
+        scene=dict(bgcolor="#0b0f14"),
         showlegend=True,
     )
 
     fig.write_html(str(output_dir / "kernel_3d.html"))
     print(f"Saved: {output_dir / 'kernel_3d.html'}")
 
+    return embedding
 
-def generate_previews(output_dir: Path):
-    """Generate SVG preview thumbnails."""
 
-    # 2D preview
-    svg_2d = '''<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
-  <rect width="400" height="300" fill="#1a1a2e"/>
-  <text x="200" y="25" text-anchor="middle" fill="#e94560" font-family="Arial" font-size="14" font-weight="bold">2D Module Map</text>
+def generate_data_driven_preview(embedding, names, families, output_dir: Path, is_3d=False):
+    """Generate data-driven SVG preview with connection lines like GenerativeStack."""
 
-  <!-- Data Plane cluster -->
-  <circle cx="80" cy="100" r="8" fill="#6c5ce7"/>
-  <circle cx="95" cy="115" r="6" fill="#6c5ce7"/>
-  <circle cx="110" cy="95" r="7" fill="#6c5ce7"/>
-  <text x="95" y="140" text-anchor="middle" fill="#6c5ce7" font-size="8">Data Plane</text>
+    if embedding is None:
+        return
 
-  <!-- Native Kernel cluster -->
-  <circle cx="180" cy="80" r="7" fill="#00b894"/>
-  <circle cx="200" cy="95" r="8" fill="#00b894"/>
-  <circle cx="165" cy="100" r="6" fill="#00b894"/>
-  <text x="180" y="125" text-anchor="middle" fill="#00b894" font-size="8">Native</text>
+    # Normalize coordinates to fit in viewbox
+    min_x, max_x = embedding[:, 0].min(), embedding[:, 0].max()
+    min_y, max_y = embedding[:, 1].min(), embedding[:, 1].max()
 
-  <!-- Computation Plane cluster -->
-  <circle cx="280" cy="110" r="9" fill="#e17055"/>
-  <circle cx="300" cy="95" r="7" fill="#e17055"/>
-  <circle cx="265" cy="125" r="6" fill="#e17055"/>
-  <text x="280" y="150" text-anchor="middle" fill="#e17055" font-size="8">Computation</text>
+    # Scale to 800x600 with padding
+    padding = 40
+    width, height = 800, 600
 
-  <!-- Full Kernel cluster -->
-  <circle cx="200" cy="200" r="10" fill="#e94560"/>
-  <circle cx="220" cy="185" r="8" fill="#e94560"/>
-  <circle cx="180" cy="215" r="7" fill="#e94560"/>
-  <text x="200" y="245" text-anchor="middle" fill="#e94560" font-size="8">Full Kernel</text>
+    def scale_x(x):
+        return padding + (x - min_x) / (max_x - min_x) * (width - 2*padding)
 
-  <!-- Combinators cluster -->
-  <circle cx="320" cy="200" r="8" fill="#0984e3"/>
-  <circle cx="335" cy="215" r="6" fill="#0984e3"/>
-  <text x="325" y="240" text-anchor="middle" fill="#0984e3" font-size="8">Combinators</text>
+    def scale_y(y):
+        return padding + (y - min_y) / (max_y - min_y) * (height - 2*padding)
 
-  <text x="200" y="280" text-anchor="middle" fill="#60a5fa" font-family="Arial" font-size="10">Click to open interactive view</text>
+    coords = [(scale_x(embedding[i, 0]), scale_y(embedding[i, 1])) for i in range(len(names))]
+
+    # Generate connection lines (random subset of edges)
+    random.seed(42)
+    lines_svg = []
+    for i in range(len(names)):
+        # Connect to 2-3 nearby points
+        for j in range(i+1, min(i+4, len(names))):
+            if random.random() < 0.3:  # 30% chance of edge
+                lines_svg.append(
+                    f'    <line x1="{coords[i][0]:.1f}" y1="{coords[i][1]:.1f}" '
+                    f'x2="{coords[j][0]:.1f}" y2="{coords[j][1]:.1f}"/>'
+                )
+
+    # Generate circles
+    circles_svg = []
+    for i, (x, y) in enumerate(coords):
+        family = families[i]
+        color = FAMILY_COLORS.get(family, "#a0a0a0")
+        opacity = 0.7 + random.random() * 0.3
+        radius = 8 + random.random() * 4
+        circles_svg.append(
+            f'  <circle cx="{x:.1f}" cy="{y:.1f}" r="{radius:.1f}" fill="{color}" opacity="{opacity:.2f}"/>'
+        )
+
+    suffix = "3d" if is_3d else "2d"
+    title = "3D Module Map" if is_3d else "2D Module Map"
+
+    svg = f'''<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}">
+  <rect width="{width}" height="{height}" fill="#0b0f14"/>
+  <text x="{width//2}" y="25" text-anchor="middle" fill="#e94560" font-family="Arial" font-size="16" font-weight="bold">{title}</text>
+
+  <!-- Connection lines -->
+  <g stroke="rgba(207,216,220,0.25)" stroke-width="0.5">
+{chr(10).join(lines_svg)}
+  </g>
+
+  <!-- Module points -->
+{chr(10).join(circles_svg)}
+
+  <!-- Legend -->
+  <g transform="translate(20, {height - 100})">
+    <rect x="0" y="0" width="12" height="12" fill="#6c5ce7"/><text x="18" y="10" fill="#a0a0a0" font-size="9">DataPlane</text>
+    <rect x="0" y="18" width="12" height="12" fill="#00b894"/><text x="18" y="28" fill="#a0a0a0" font-size="9">NativeKernel</text>
+    <rect x="100" y="0" width="12" height="12" fill="#e17055"/><text x="118" y="10" fill="#a0a0a0" font-size="9">ComputationPlane</text>
+    <rect x="100" y="18" width="12" height="12" fill="#e94560"/><text x="118" y="28" fill="#a0a0a0" font-size="9">FullKernel</text>
+    <rect x="230" y="0" width="12" height="12" fill="#0984e3"/><text x="248" y="10" fill="#a0a0a0" font-size="9">Combinators</text>
+    <rect x="230" y="18" width="12" height="12" fill="#fd79a8"/><text x="248" y="28" fill="#a0a0a0" font-size="9">Foundation</text>
+  </g>
+
+  <text x="{width//2}" y="{height - 15}" text-anchor="middle" fill="#60a5fa" font-family="Arial" font-size="10">Click to open interactive view</text>
 </svg>'''
 
-    (output_dir / "kernel_2d_preview.svg").write_text(svg_2d)
-    print(f"Saved: {output_dir / 'kernel_2d_preview.svg'}")
-
-    # 3D preview
-    svg_3d = '''<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
-  <rect width="400" height="300" fill="#1a1a2e"/>
-  <text x="200" y="25" text-anchor="middle" fill="#e94560" font-family="Arial" font-size="14" font-weight="bold">3D Module Map</text>
-
-  <!-- 3D perspective ellipse -->
-  <ellipse cx="200" cy="160" rx="160" ry="90" fill="none" stroke="#2d3436" stroke-width="1"/>
-
-  <!-- Scattered points with depth effect -->
-  <circle cx="100" cy="120" r="12" fill="#6c5ce7" opacity="0.9"/>
-  <circle cx="150" cy="100" r="8" fill="#00b894" opacity="0.8"/>
-  <circle cx="220" cy="130" r="14" fill="#e17055" opacity="0.95"/>
-  <circle cx="280" cy="110" r="10" fill="#e94560" opacity="0.85"/>
-  <circle cx="180" cy="180" r="11" fill="#0984e3" opacity="0.9"/>
-  <circle cx="250" cy="190" r="9" fill="#e94560" opacity="0.75"/>
-  <circle cx="130" cy="170" r="7" fill="#6c5ce7" opacity="0.7"/>
-  <circle cx="300" cy="170" r="8" fill="#00b894" opacity="0.8"/>
-
-  <!-- Depth lines -->
-  <line x1="100" y1="120" x2="90" y2="200" stroke="#6c5ce7" stroke-width="1" opacity="0.3"/>
-  <line x1="220" y1="130" x2="210" y2="210" stroke="#e17055" stroke-width="1" opacity="0.3"/>
-  <line x1="280" y1="110" x2="270" y2="190" stroke="#e94560" stroke-width="1" opacity="0.3"/>
-
-  <text x="200" y="280" text-anchor="middle" fill="#60a5fa" font-family="Arial" font-size="10">Click to open interactive 3D view</text>
-</svg>'''
-
-    (output_dir / "kernel_3d_preview.svg").write_text(svg_3d)
-    print(f"Saved: {output_dir / 'kernel_3d_preview.svg'}")
+    filename = f"kernel_{suffix}_preview.svg"
+    (output_dir / filename).write_text(svg)
+    print(f"Saved: {output_dir / filename}")
 
 
 def generate_pipeline_overview(output_dir: Path):
@@ -272,7 +283,7 @@ def generate_pipeline_overview(output_dir: Path):
     </marker>
   </defs>
 
-  <rect width="900" height="400" fill="#1a1a2e"/>
+  <rect width="900" height="400" fill="#0b0f14"/>
   <text x="450" y="30" text-anchor="middle" fill="#e94560" font-family="Arial" font-size="18" font-weight="bold">Lean Kernel → SKY Pipeline</text>
 
   <!-- Phase boxes -->
@@ -359,7 +370,7 @@ def generate_phase_dependencies(output_dir: Path):
     </marker>
   </defs>
 
-  <rect width="700" height="500" fill="#1a1a2e"/>
+  <rect width="700" height="500" fill="#0b0f14"/>
   <text x="350" y="25" text-anchor="middle" fill="#e94560" font-family="Arial" font-size="16" font-weight="bold">Phase Dependencies</text>
 
   <!-- Row 1: Data Plane -->
@@ -517,18 +528,26 @@ def main():
     # Collect Lean files
     lean_files = collect_lean_files(bundle_dir / "HeytingLean")
 
+    embedding_2d = None
+    embedding_3d = None
+
     if lean_files:
         print(f"Found {len(lean_files)} Lean files")
         texts, names, families = extract_features(lean_files)
 
         if texts:
-            generate_umap_2d(texts, names, families, output_dir)
-            generate_umap_3d(texts, names, families, output_dir)
+            embedding_2d = generate_umap_2d(texts, names, families, output_dir)
+            embedding_3d = generate_umap_3d(texts, names, families, output_dir)
+
+            # Generate data-driven previews
+            if embedding_2d is not None:
+                generate_data_driven_preview(embedding_2d, names, families, output_dir, is_3d=False)
+            if embedding_3d is not None:
+                generate_data_driven_preview(embedding_3d[:, :2], names, families, output_dir, is_3d=True)
     else:
         print("No Lean files found - generating static visuals only")
 
     # Always generate static SVGs
-    generate_previews(output_dir)
     generate_pipeline_overview(output_dir)
     generate_phase_dependencies(output_dir)
 
