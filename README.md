@@ -465,3 +465,8 @@ lean-kernel-sky/
 <p align="center">
   <em>Part of the <a href="https://apoth3osis.io">HeytingLean</a> formal verification project</em>
 </p>
+
+## License
+
+This project is provided under the Apoth3osis License Stack v1.
+See `LICENSE.md` and the files under `licenses/`.
